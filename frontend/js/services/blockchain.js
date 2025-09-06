@@ -1,13 +1,16 @@
 /**
  * Blockchain Service
- * Handles Algorand blockchain interactions
+ * Handles Algorand blockchain interactions with real wallets
  */
 
 class BlockchainService {
     constructor() {
         this.algodClient = null;
         this.indexerClient = null;
-        this.wallet = null;
+        this.peraWallet = null;
+        this.deflyWallet = null;
+        this.connectedWallet = null;
+        this.activeAddress = null;
     }
 
     async initialize() {
@@ -17,41 +20,77 @@ class BlockchainService {
                 process.env.ALGOD_TOKEN || '',
                 process.env.ALGOD_SERVER || 'https://testnet-api.algonode.cloud'
             );
-            
+
             this.indexerClient = new window.algosdk.Indexer(
                 process.env.INDEXER_TOKEN || '',
                 process.env.INDEXER_SERVER || 'https://testnet-idx.algonode.cloud'
             );
 
+            // Initialize wallets
+            await this.initializeWallets();
+
             return true;
         } catch (error) {
             console.error('Failed to initialize blockchain service:', error);
-            return false;
+            throw error;
         }
     }
 
-    async connectWallet() {
-        try {
-            // Check if Pera Wallet is available
-            if (typeof window.PeraWalletConnect === 'undefined') {
-                throw new Error('Pera Wallet not installed. Please install it from the Chrome Web Store.');
-            }
-
-            this.wallet = new window.PeraWalletConnect({
+    async initializeWallets() {
+        // Initialize Pera Wallet
+        if (typeof window.PeraWalletConnect !== 'undefined') {
+            this.peraWallet = new window.PeraWalletConnect({
                 chainId: 416002, // TestNet
                 shouldShowSignTxnToast: true
             });
+        }
 
-            const accounts = await this.wallet.connect();
-            
+        // Initialize Defly Wallet
+        if (typeof window.DeflyWalletConnect !== 'undefined') {
+            this.deflyWallet = new window.DeflyWalletConnect({
+                appId: Date.now() // Unique app ID
+            });
+        }
+    }
+
+    async connectWallet(walletType = 'pera') {
+        try {
+            let accounts = [];
+            let wallet = null;
+
+            switch (walletType) {
+                case 'pera':
+                    if (!this.peraWallet) {
+                        throw new Error('Pera Wallet not available. Please install Pera Wallet extension.');
+                    }
+                    accounts = await this.peraWallet.connect();
+                    this.connectedWallet = 'pera';
+                    break;
+
+                case 'defly':
+                    if (!this.deflyWallet) {
+                        throw new Error('Defly Wallet not available. Please install Defly Wallet.');
+                    }
+                    const deflyAccounts = await this.deflyWallet.connect();
+                    accounts = deflyAccounts.accounts || [];
+                    this.connectedWallet = 'defly';
+                    break;
+
+                default:
+                    throw new Error(`Unsupported wallet type: ${walletType}`);
+            }
+
             if (accounts.length > 0) {
+                this.activeAddress = accounts[0];
+
                 return {
                     connected: true,
                     address: accounts[0],
-                    accounts: accounts
+                    accounts: accounts,
+                    wallet: walletType
                 };
             } else {
-                throw new Error('No accounts found');
+                throw new Error('No accounts found in wallet');
             }
         } catch (error) {
             console.error('Wallet connection failed:', error);
@@ -60,9 +99,48 @@ class BlockchainService {
     }
 
     async disconnectWallet() {
-        if (this.wallet) {
-            await this.wallet.disconnect();
-            this.wallet = null;
+        try {
+            switch (this.connectedWallet) {
+                case 'pera':
+                    if (this.peraWallet) {
+                        await this.peraWallet.disconnect();
+                    }
+                    break;
+                case 'defly':
+                    if (this.deflyWallet) {
+                        await this.deflyWallet.disconnect();
+                    }
+                    break;
+            }
+
+            this.connectedWallet = null;
+            this.activeAddress = null;
+        } catch (error) {
+            console.error('Wallet disconnection failed:', error);
+        }
+    }
+
+    async signTransaction(transaction, walletType = null) {
+        const wallet = walletType || this.connectedWallet;
+
+        try {
+            switch (wallet) {
+                case 'pera':
+                    if (!this.peraWallet) throw new Error('Pera Wallet not connected');
+                    const peraSigned = await this.peraWallet.signTransaction([transaction]);
+                    return peraSigned[0];
+
+                case 'defly':
+                    if (!this.deflyWallet) throw new Error('Defly Wallet not connected');
+                    const deflySigned = await this.deflyWallet.signTransaction(transaction);
+                    return deflySigned;
+
+                default:
+                    throw new Error(`Unsupported wallet for signing: ${wallet}`);
+            }
+        } catch (error) {
+            console.error('Transaction signing failed:', error);
+            throw error;
         }
     }
 

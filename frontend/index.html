@@ -23,8 +23,9 @@
     <!-- Algorand SDK -->
     <script src="https://unpkg.com/algosdk@2.7.0/dist/browser/algosdk.min.js"></script>
     
-    <!-- Pera Wallet Connect -->
-    <script src="https://unpkg.com/@perawallet/connect@1.4.2/dist/index.js"></script>
+    <!-- WalletConnect -->
+    <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+    <script src="https://unpkg.com/@walletconnect/qrcode-modal@1.8.0/dist/umd/index.min.js"></script>
 </head>
 <body>
     <div id="root">
@@ -52,45 +53,72 @@
             });
             
             const [models, setModels] = useState([]);
-            const [peraWallet, setPeraWallet] = useState(null);
+            const [walletConnector, setWalletConnector] = useState(null);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState(null);
 
-            // Initialize Algorand client
+            // Initialize Algorand client (make it accessible globally)
             const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
+            
+            // Make algodClient available globally for other components
+            if (typeof window !== 'undefined') {
+                window.algodClient = algodClient;
+            }
 
-            // Initialize Pera Wallet
+            // Initialize Exodus Wallet
             useEffect(() => {
                 const initWallet = async () => {
                     try {
-                        // Wait for PeraWalletConnect to be available
+                        // Wait for Exodus to inject into window
                         let attempts = 0;
-                        while (typeof PeraWalletConnect === 'undefined' && attempts < 10) {
-                            await new Promise(resolve => setTimeout(resolve, 200));
+                        while (!window.exodus && attempts < 20) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
                             attempts++;
                         }
 
-                        if (typeof PeraWalletConnect !== 'undefined') {
-                            const wallet = new PeraWalletConnect({
-                                chainId: 416002 // TestNet
-                            });
-                            setPeraWallet(wallet);
-                            console.log('✅ Pera Wallet initialized');
+                        if (window.exodus) {
+                            console.log('Exodus object found:', window.exodus);
+                            
+                            // Try different possible Exodus API structures
+                            if (window.exodus.algorand) {
+                                setWalletConnector(window.exodus.algorand);
+                                console.log('✅ Exodus Algorand API detected');
+                            } else if (window.exodus.providers && window.exodus.providers.algorand) {
+                                setWalletConnector(window.exodus.providers.algorand);
+                                console.log('✅ Exodus Algorand provider detected');
+                            } else if (window.exodus.request) {
+                                // Generic Exodus API
+                                setWalletConnector(window.exodus);
+                                console.log('✅ Exodus generic API detected');
+                            } else {
+                                console.warn('Exodus detected but no Algorand support found:', Object.keys(window.exodus));
+                            }
 
                             // Try to reconnect existing session
                             try {
-                                const accounts = await wallet.reconnectSession();
-                                if (accounts.length > 0) {
-                                    await connectExistingWallet(accounts[0]);
+                                const connector = walletConnector || window.exodus.algorand || window.exodus;
+                                if (connector && connector.getAccounts) {
+                                    const accounts = await connector.getAccounts();
+                                    if (accounts) {
+                                        let address;
+                                        if (accounts.address) {
+                                            address = accounts.address;
+                                        } else if (Array.isArray(accounts) && accounts.length > 0) {
+                                            address = accounts[0];
+                                        }
+                                        if (address) {
+                                            await connectExistingWallet(address);
+                                        }
+                                    }
                                 }
                             } catch (err) {
-                                console.log('No existing wallet session');
+                                console.log('No existing Exodus session:', err.message);
                             }
                         } else {
-                            console.warn('❌ Pera Wallet not available');
+                            console.warn('❌ Exodus Wallet not detected - please install from Chrome Web Store');
                         }
                     } catch (err) {
-                        console.error('Failed to initialize Pera Wallet:', err);
+                        console.error('Failed to initialize Exodus Wallet:', err);
                     }
                 };
 
@@ -121,17 +149,51 @@
                     setLoading(true);
                     setError(null);
 
-                    if (!peraWallet) {
-                        alert('Please install Pera Wallet:\\n\\n• Mobile: App Store/Google Play\\n• Desktop: Chrome Web Store\\n\\nAfter installation, refresh this page.');
+                    if (!walletConnector) {
+                        alert('Please install Exodus Wallet from Chrome Web Store:\\n\\nhttps://chrome.google.com/webstore/search/Exodus\\n\\nAfter installation, refresh this page.');
                         return;
                     }
 
-                    const accounts = await peraWallet.connect();
-                    if (accounts.length === 0) {
-                        throw new Error('No accounts found');
+                    // Request connection to Exodus using different methods
+                    let accounts;
+                    
+                    if (walletConnector.connect) {
+                        accounts = await walletConnector.connect();
+                    } else if (walletConnector.request) {
+                        // Try generic wallet request method
+                        accounts = await walletConnector.request({
+                            method: 'algo_accounts'
+                        });
+                    } else if (walletConnector.enable) {
+                        // Try enable method
+                        accounts = await walletConnector.enable();
+                    } else {
+                        throw new Error('Exodus wallet API not recognized - connection method not found');
+                    }
+                    
+                    console.log('Exodus returned accounts:', accounts);
+                    
+                    // Handle different response formats from Exodus
+                    let address;
+                    if (accounts && accounts.address) {
+                        // Exodus returns {address: "..."}
+                        address = accounts.address;
+                    } else if (accounts && Array.isArray(accounts) && accounts.length > 0) {
+                        // Standard array format
+                        address = accounts[0];
+                    } else if (typeof accounts === 'string') {
+                        // Direct address string
+                        address = accounts;
+                    } else {
+                        throw new Error('No accounts found - please unlock your Exodus wallet');
                     }
 
-                    const address = accounts[0];
+                    console.log('Using address:', address);
+                    
+                    if (!address || address === 'undefined' || typeof address !== 'string') {
+                        throw new Error('Invalid address received from Exodus wallet');
+                    }
+
                     const accountInfo = await algodClient.accountInformation(address).do();
                     const balance = accountInfo.amount / 1000000;
 
@@ -141,9 +203,9 @@
                         balance: balance
                     });
 
-                    console.log('✅ Wallet connected:', address);
+                    console.log('✅ Exodus Wallet connected:', address);
                 } catch (err) {
-                    setError('Failed to connect wallet: ' + err.message);
+                    setError('Failed to connect Exodus wallet: ' + err.message);
                 } finally {
                     setLoading(false);
                 }
@@ -152,8 +214,8 @@
             // Disconnect wallet
             const disconnectWallet = async () => {
                 try {
-                    if (peraWallet) {
-                        await peraWallet.disconnect();
+                    if (walletConnector && walletConnector.disconnect) {
+                        await walletConnector.disconnect();
                     }
                 } catch (err) {
                     console.error('Disconnect error:', err);
@@ -231,8 +293,8 @@
                     setLoading(true);
                     setError(null);
 
-                    if (!wallet.connected || !peraWallet) {
-                        throw new Error('Please connect your wallet first');
+                    if (!wallet.connected || !walletConnector) {
+                        throw new Error('Please connect your Exodus wallet first');
                     }
 
                     console.log('🚀 Starting purchase for model:', model.name);
@@ -242,16 +304,21 @@
                     const priceInMicroAlgos = Math.floor(model.priceAlgo * 1000000);
 
                     // Create application call transaction
+                    // Helper function to convert string to Uint8Array
+                    const stringToUint8Array = (str) => {
+                        return new Uint8Array(str.split('').map(char => char.charCodeAt(0)));
+                    };
+
                     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
                         from: wallet.address,
                         appIndex: ESCROW_APP_ID,
                         onComplete: algosdk.OnApplicationComplete.NoOpOC,
                         appArgs: [
-                            new Uint8Array(Buffer.from('purchase')),
+                            stringToUint8Array('purchase'),
                             algosdk.encodeUint64(model.id)
                         ],
                         suggestedParams,
-                        note: new Uint8Array(Buffer.from(`Purchase: ${model.name}`))
+                        note: stringToUint8Array(`Purchase: ${model.name}`)
                     });
 
                     // Create payment transaction
@@ -260,7 +327,7 @@
                         to: CONTRACT_CREATOR,
                         amount: priceInMicroAlgos,
                         suggestedParams,
-                        note: new Uint8Array(Buffer.from(`Payment: ${model.name}`))
+                        note: stringToUint8Array(`Payment: ${model.name}`)
                     });
 
                     // Group transactions
@@ -268,8 +335,8 @@
                     const groupID = algosdk.computeGroupID(txnsToSign);
                     txnsToSign.forEach(txn => txn.group = groupID);
 
-                    // Sign with Pera Wallet
-                    const signedTxns = await peraWallet.signTransaction([txnsToSign]);
+                    // Sign with Exodus Wallet
+                    const signedTxns = await walletConnector.signTransaction(txnsToSign);
 
                     // Submit to network
                     const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
@@ -377,7 +444,9 @@
                 fetchModels,
                 purchaseModel,
                 downloadModel,
-                setError
+                setError,
+                algodClient,
+                walletConnector
             };
 
             return (
@@ -394,6 +463,368 @@
                 throw new Error('useApp must be used within AppProvider');
             }
             return context;
+        };
+
+        // Model Creation Component
+        const ModelCreation = () => {
+            const { wallet, loading, setError, algodClient, walletConnector } = useApp();
+            const [modelData, setModelData] = useState({
+                name: '',
+                description: '',
+                framework: '',
+                accuracy: '',
+                price: '',
+                category: '',
+                file: null
+            });
+            const [uploading, setUploading] = useState(false);
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setModelData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                setModelData(prev => ({ ...prev, file }));
+            };
+
+            const publishModel = async () => {
+                try {
+                    if (!wallet.connected) {
+                        throw new Error('Please connect your wallet first');
+                    }
+
+                    if (!modelData.file) {
+                        throw new Error('Please select a model file to upload');
+                    }
+
+                    if (!modelData.name || !modelData.description || !modelData.price) {
+                        throw new Error('Please fill in all required fields');
+                    }
+
+                    setUploading(true);
+                    setError(null);
+
+                    console.log('🚀 Publishing model:', modelData.name);
+
+                    // Create FormData for file upload with encryption
+                    const formData = new FormData();
+                    formData.append('file', modelData.file);
+                    formData.append('name', modelData.name);
+                    formData.append('description', modelData.description);
+                    formData.append('framework', modelData.framework);
+                    formData.append('accuracy', modelData.accuracy);
+                    formData.append('price', modelData.price);
+                    formData.append('category', modelData.category);
+                    formData.append('creator', wallet.address);
+                    formData.append('encrypt', 'true'); // Enable encryption
+
+                    // Upload and encrypt model
+                    const response = await fetch('/api/models/publish', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Failed to publish model');
+                    }
+
+                    console.log('📡 Model uploaded and encrypted:', result);
+
+                    // Check if we have algodClient and walletConnector
+                    if (!algodClient || !walletConnector) {
+                        throw new Error('Blockchain client or wallet not properly initialized');
+                    }
+
+                    // Create simple blockchain transaction for model registration
+                    console.log('🔗 Creating blockchain registration transaction...');
+                    const suggestedParams = await algodClient.getTransactionParams().do();
+                    
+                    // Helper function to convert string to Uint8Array
+                    const stringToUint8Array = (str) => {
+                        return new Uint8Array(str.split('').map(char => char.charCodeAt(0)));
+                    };
+
+                    // Create a simple payment transaction with model metadata in note
+                    const modelMetadata = JSON.stringify({
+                        action: 'register_model',
+                        modelId: result.modelId,
+                        name: modelData.name,
+                        price: parseFloat(modelData.price),
+                        encryptedHash: result.encryptedHash || 'no-hash',
+                        creator: wallet.address
+                    });
+
+                    const registrationTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+                        from: wallet.address,
+                        to: wallet.address, // Self-transaction for registration
+                        amount: 0, // Zero amount, just for registration
+                        suggestedParams,
+                        note: stringToUint8Array(modelMetadata)
+                    });
+
+                    console.log('✍️ Signing transaction with Exodus...');
+                    // Sign with Exodus Wallet
+                    const signedTxns = await walletConnector.signTransaction([registrationTxn]);
+
+                    // Submit to blockchain
+                    console.log('📡 Submitting to blockchain...');
+                    const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
+                    console.log('📡 Blockchain registration submitted:', txId);
+
+                    // Wait for confirmation
+                    console.log('⏳ Waiting for confirmation...');
+                    const confirmedTxn = await algosdk.waitForConfirmation(algodClient, txId, 4);
+                    
+                    if (confirmedTxn['confirmed-round']) {
+                        alert(`🎉 Model Published Successfully!\\n\\nModel: ${modelData.name}\\nPrice: ${modelData.price} ALGO\\nTransaction: ${txId}\\nBlock: ${confirmedTxn['confirmed-round']}\\n\\nYour model is now encrypted and available in the marketplace!`);
+                        
+                        // Reset form
+                        setModelData({
+                            name: '',
+                            description: '',
+                            framework: '',
+                            accuracy: '',
+                            price: '',
+                            category: '',
+                            file: null
+                        });
+                        
+                        // Clear file input
+                        const fileInput = document.getElementById('model-file-input');
+                        if (fileInput) fileInput.value = '';
+                        
+                        console.log('✅ Model creation completed successfully!');
+                    }
+
+                } catch (err) {
+                    const errorMsg = err.message.includes('cancelled') ? 
+                        'Transaction cancelled by user' : 
+                        'Model publication failed: ' + err.message;
+                    setError(errorMsg);
+                    console.error('Model publication error:', err);
+                } finally {
+                    setUploading(false);
+                }
+            };
+
+            return (
+                <div style={{padding: '20px', backgroundColor: '#f5f5f5', minHeight: '80vh'}}>
+                    <div style={{marginBottom: '30px'}}>
+                        <h2 style={{color: '#333', margin: '0', fontSize: '28px'}}>🧠 Create ML Model</h2>
+                        <p style={{color: '#666', margin: '5px 0 0 0'}}>
+                            Upload and encrypt your machine learning model on Algorand blockchain
+                        </p>
+                    </div>
+
+                    <div style={{maxWidth: '800px', backgroundColor: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}}>
+                        <div style={{display: 'grid', gap: '20px'}}>
+                            {/* Model Name */}
+                            <div>
+                                <label style={{display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333'}}>
+                                    Model Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={modelData.name}
+                                    onChange={handleInputChange}
+                                    placeholder="e.g., Advanced Image Classifier v2.0"
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '6px',
+                                        fontSize: '16px'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label style={{display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333'}}>
+                                    Description *
+                                </label>
+                                <textarea
+                                    name="description"
+                                    value={modelData.description}
+                                    onChange={handleInputChange}
+                                    placeholder="Describe your model's capabilities, training data, and use cases..."
+                                    rows="4"
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '6px',
+                                        fontSize: '16px',
+                                        resize: 'vertical'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Framework and Category */}
+                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                                <div>
+                                    <label style={{display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333'}}>
+                                        Framework
+                                    </label>
+                                    <select
+                                        name="framework"
+                                        value={modelData.framework}
+                                        onChange={handleInputChange}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '6px',
+                                            fontSize: '16px'
+                                        }}
+                                    >
+                                        <option value="">Select Framework</option>
+                                        <option value="TensorFlow">TensorFlow</option>
+                                        <option value="PyTorch">PyTorch</option>
+                                        <option value="Keras">Keras</option>
+                                        <option value="scikit-learn">scikit-learn</option>
+                                        <option value="XGBoost">XGBoost</option>
+                                        <option value="LightGBM">LightGBM</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={{display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333'}}>
+                                        Category
+                                    </label>
+                                    <select
+                                        name="category"
+                                        value={modelData.category}
+                                        onChange={handleInputChange}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '6px',
+                                            fontSize: '16px'
+                                        }}
+                                    >
+                                        <option value="">Select Category</option>
+                                        <option value="Computer Vision">Computer Vision</option>
+                                        <option value="Natural Language Processing">Natural Language Processing</option>
+                                        <option value="Time Series">Time Series</option>
+                                        <option value="Recommendation">Recommendation</option>
+                                        <option value="Reinforcement Learning">Reinforcement Learning</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Accuracy and Price */}
+                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                                <div>
+                                    <label style={{display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333'}}>
+                                        Accuracy
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="accuracy"
+                                        value={modelData.accuracy}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g., 95.2%"
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '6px',
+                                            fontSize: '16px'
+                                        }}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333'}}>
+                                        Price (ALGO) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="price"
+                                        value={modelData.price}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g., 10"
+                                        min="0.1"
+                                        step="0.1"
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '6px',
+                                            fontSize: '16px'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* File Upload */}
+                            <div>
+                                <label style={{display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333'}}>
+                                    Model File * (Will be encrypted)
+                                </label>
+                                <input
+                                    type="file"
+                                    id="model-file-input"
+                                    onChange={handleFileChange}
+                                    accept=".pkl,.h5,.pt,.pth,.onnx,.joblib,.model"
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '6px',
+                                        fontSize: '16px'
+                                    }}
+                                />
+                                <p style={{fontSize: '12px', color: '#666', margin: '8px 0 0 0'}}>
+                                    Supported formats: .pkl, .h5, .pt, .pth, .onnx, .joblib, .model (max 100MB)
+                                </p>
+                                {modelData.file && (
+                                    <div style={{marginTop: '10px', padding: '10px', backgroundColor: '#e8f5e8', borderRadius: '6px'}}>
+                                        <strong>📁 Selected file:</strong> {modelData.file.name} ({(modelData.file.size / 1024 / 1024).toFixed(2)} MB)
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Encryption Info */}
+                            <div style={{padding: '15px', backgroundColor: '#fff3cd', borderRadius: '6px', border: '1px solid #ffeaa7'}}>
+                                <h4 style={{margin: '0 0 10px 0', color: '#856404'}}>🔒 IP Protection</h4>
+                                <p style={{margin: '0', fontSize: '14px', color: '#856404'}}>
+                                    Your model will be encrypted using AES-256 before storage. Only purchasers can decrypt and access the model files, ensuring your intellectual property is protected.
+                                </p>
+                            </div>
+
+                            {/* Submit Button */}
+                            <button
+                                onClick={publishModel}
+                                disabled={!wallet.connected || uploading || loading}
+                                style={{
+                                    padding: '15px 30px',
+                                    backgroundColor: wallet.connected ? '#4caf50' : '#ccc',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '18px',
+                                    fontWeight: 'bold',
+                                    cursor: wallet.connected && !uploading ? 'pointer' : 'not-allowed',
+                                    opacity: uploading ? 0.7 : 1
+                                }}
+                            >
+                                {uploading ? '🔄 Publishing & Encrypting...' : 
+                                 wallet.connected ? '🚀 Publish Model' : '🔗 Connect Wallet First'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
         };
 
         // Header Component
@@ -456,7 +887,7 @@
                                     opacity: loading ? 0.7 : 1
                                 }}
                             >
-                                {loading ? '🔄 Connecting...' : '🔗 Connect Pera Wallet'}
+                                {loading ? '🔄 Connecting...' : '🔗 Connect Exodus Wallet'}
                             </button>
                         )}
                     </div>
@@ -725,10 +1156,52 @@
 
         // Main App
         const App = () => {
+            const [activeTab, setActiveTab] = useState('marketplace');
+
             return (
                 <div>
                     <Header />
-                    <Marketplace />
+                    
+                    {/* Navigation Tabs */}
+                    <div style={{backgroundColor: '#1a1a2e', padding: '0 20px'}}>
+                        <div style={{display: 'flex', gap: '0'}}>
+                            <button
+                                onClick={() => setActiveTab('marketplace')}
+                                style={{
+                                    padding: '15px 30px',
+                                    backgroundColor: activeTab === 'marketplace' ? '#4caf50' : 'transparent',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px 8px 0 0',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                🏪 Marketplace
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('create')}
+                                style={{
+                                    padding: '15px 30px',
+                                    backgroundColor: activeTab === 'create' ? '#4caf50' : 'transparent',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px 8px 0 0',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                🧠 Create Model
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Tab Content */}
+                    {activeTab === 'marketplace' ? <Marketplace /> : <ModelCreation />}
                 </div>
             );
         };

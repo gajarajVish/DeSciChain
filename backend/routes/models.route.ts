@@ -66,24 +66,22 @@ router.post('/publish', upload.single('model'), async (req: Request, res: Respon
       });
     }
 
-    // Generate encryption key
-    const encryptionKey = encryptionService.generateKey();
-    
-    // Add watermark to model
-    const watermarkResult = await watermarkService.addWatermark(
+    // Use enhanced encryption with multiple layers
+    const secureEncryptionResult = await encryptionService.encryptModelSecure(
       req.file.buffer,
       ownerInfo,
-      customData
+      {
+        watermark: true,
+        useHybrid: false // Can be enabled with recipient public key
+      }
     );
 
-    // Encrypt watermarked model
-    const encryptionResult = await encryptionService.encryptModel(
-      watermarkResult.watermarkedData,
-      encryptionKey
-    );
+    const encryptionKey = secureEncryptionResult.encryptionKey;
+    const encryptedData = secureEncryptionResult.encryptedData;
+    const encryptionMetadata = secureEncryptionResult.metadata;
 
     // Upload encrypted model to IPFS
-    const ipfsResult = await ipfsService.uploadFile(encryptionResult.encryptedData);
+    const ipfsResult = await ipfsService.uploadFile(encryptedData);
 
     // Register model on blockchain
     const publisherPrivateKeyBuffer = Buffer.from(publisherPrivateKey, 'hex');
@@ -103,8 +101,7 @@ router.post('/publish', upload.single('model'), async (req: Request, res: Respon
       algorandTxnId: blockchainResult.txnId,
       encryptionKeyHash: encryptionService.hashKey(encryptionKey),
       licenseTerms: JSON.parse(licenseTerms),
-      watermark: watermarkResult.watermark,
-      watermarkPosition: watermarkResult.position,
+      encryptionMetadata: JSON.stringify(encryptionMetadata),
       createdAt: new Date()
     };
 
@@ -155,8 +152,35 @@ router.post('/purchase', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Model not found' });
     }
 
-    // Create escrow
+    // Create escrow with real blockchain transaction
     const buyerPrivateKeyBuffer = Buffer.from(buyerPrivateKey, 'hex');
+
+    // Initialize blockchain service
+    const blockchainService = new (require('../services/blockchain.service')).BlockchainService({
+      algodToken: process.env.ALGOD_TOKEN || '',
+      algodServer: process.env.ALGOD_SERVER || 'https://testnet-api.algonode.cloud',
+      indexerToken: process.env.INDEXER_TOKEN || '',
+      indexerServer: process.env.INDEXER_SERVER || 'https://testnet-idx.algonode.cloud',
+      modelRegistryAppId: parseInt(process.env.MODEL_REGISTRY_APP_ID || '0'),
+      escrowAppId: parseInt(process.env.ESCROW_APP_ID || '0')
+    });
+
+    // Create payment transaction
+    const paymentTxn = await blockchainService.algodClient.createTransaction.payment({
+      sender: buyerAddress,
+      receiver: modelInfo.publisher,
+      amount: parseInt(price) * 1000000, // Convert to microAlgos
+      note: `DeSciChain Model Purchase: ${modelId}`
+    });
+
+    // Sign and send transaction
+    const signedTxn = paymentTxn.signTxn(buyerPrivateKeyBuffer);
+    const sendResponse = await blockchainService.algodClient.sendRawTransaction(signedTxn).do();
+
+    // Wait for confirmation
+    await blockchainService.waitForConfirmation(sendResponse.txId);
+
+    // Create escrow record
     const escrowResult = await escrowService.createEscrow(
       parseInt(modelId),
       buyerAddress,
@@ -221,27 +245,35 @@ router.get('/download', async (req: Request, res: Response) => {
     // Download encrypted model from IPFS
     const ipfsResult = await ipfsService.downloadFile(modelInfo.cid);
 
-    // Decrypt model
-    const decryptionResult = await encryptionService.decryptModel(
+    // Get encryption metadata from database (placeholder)
+    const encryptionMetadata = {}; // TODO: Retrieve from database
+
+    // Use enhanced decryption
+    const decryptionResult = await encryptionService.decryptModelSecure(
       ipfsResult.data,
-      encryptionKey as string
+      encryptionKey as string,
+      encryptionMetadata
     );
 
-    if (!decryptionResult.success) {
-      return res.status(500).json({ error: 'Failed to decrypt model' });
+    if (!decryptionResult.verified) {
+      return res.status(500).json({ error: 'Model integrity verification failed' });
     }
 
-    // Verify watermark
-    const watermarkVerification = await watermarkService.verifyWatermark(
-      decryptionResult.decryptedData,
-      escrowState.publisher,
-      undefined // We don't have the expected watermark, so let it auto-detect
-    );
+    // Verify watermark if present in metadata
+    let watermarkVerified = false;
+    if (encryptionMetadata.watermark) {
+      const watermarkVerification = await watermarkService.verifyWatermark(
+        decryptionResult.decryptedData,
+        escrowState.publisher,
+        undefined
+      );
+      watermarkVerified = watermarkVerification.isValid;
+    }
 
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="model_${escrowState.modelId}.bin"`);
-    res.setHeader('X-Watermark-Verified', watermarkVerification.isValid.toString());
-    res.setHeader('X-Watermark-Confidence', watermarkVerification.confidence.toString());
+    res.setHeader('X-Watermark-Verified', watermarkVerified.toString());
+    res.setHeader('X-Model-Verified', decryptionResult.verified.toString());
 
     res.send(decryptionResult.decryptedData);
 

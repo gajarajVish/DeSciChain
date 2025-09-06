@@ -10,11 +10,13 @@ const AppContext = createContext();
 
 // App State Provider
 const AppProvider = ({ children }) => {
-    const [wallet, setWallet] = useState({
-        connected: false,
-        address: null,
-        balance: 0
-    });
+  const [wallet, setWallet] = useState({
+    connected: false,
+    address: null,
+    balance: 0,
+    walletType: null,
+    availableWallets: []
+  });
     
     const [models, setModels] = useState({
         published: [],
@@ -41,49 +43,83 @@ const AppProvider = ({ children }) => {
         setTheme(prev => prev === 'light' ? 'dark' : 'light');
     };
 
-    // Wallet management
-    const connectWallet = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            
-            // Check if Pera Wallet is installed
-            if (typeof window.PeraWalletConnect === 'undefined') {
-                throw new Error('Pera Wallet not installed. Please install it from the Chrome Web Store.');
-            }
+  // Wallet management
+  const connectWallet = async (walletType = 'pera') => {
+    try {
+      setLoading(true);
+      setError(null);
 
-            const peraWallet = new window.PeraWalletConnect({
-                chainId: 416002, // TestNet
-                shouldShowSignTxnToast: true
-            });
+      // Initialize blockchain service if not done
+      if (!window.blockchainService) {
+        window.blockchainService = new BlockchainService();
+        await window.blockchainService.initialize();
+      }
 
-            const accounts = await peraWallet.connect();
-            
-            if (accounts.length > 0) {
-                const address = accounts[0];
-                const balance = await fetchWalletBalance(address);
-                
-                setWallet({
-                    connected: true,
-                    address,
-                    balance
-                });
-            }
-        } catch (err) {
-            setError(err.message);
-            console.error('Wallet connection error:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+      const result = await window.blockchainService.connectWallet(walletType);
 
-    const disconnectWallet = () => {
+      if (result.connected) {
+        const balance = await fetchWalletBalance(result.address);
+
         setWallet({
-            connected: false,
-            address: null,
-            balance: 0
+          connected: true,
+          address: result.address,
+          balance,
+          walletType: result.wallet,
+          availableWallets: detectAvailableWallets()
         });
-    };
+
+        Helpers.showToast(`Connected to ${result.wallet} wallet`, 'success');
+      }
+    } catch (err) {
+      setError(err.message);
+      Helpers.showToast(`Wallet connection failed: ${err.message}`, 'error');
+      console.error('Wallet connection error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const detectAvailableWallets = () => {
+    const wallets = [];
+
+    if (typeof window.PeraWalletConnect !== 'undefined') {
+      wallets.push({ id: 'pera', name: 'Pera Wallet', available: true });
+    }
+
+    if (typeof window.DeflyWalletConnect !== 'undefined') {
+      wallets.push({ id: 'defly', name: 'Defly Wallet', available: true });
+    }
+
+    return wallets;
+  };
+
+  const disconnectWallet = async () => {
+    try {
+      if (window.blockchainService) {
+        await window.blockchainService.disconnectWallet();
+      }
+
+      setWallet({
+        connected: false,
+        address: null,
+        balance: 0,
+        walletType: null,
+        availableWallets: detectAvailableWallets()
+      });
+
+      Helpers.showToast('Wallet disconnected', 'info');
+    } catch (err) {
+      console.error('Wallet disconnection error:', err);
+    }
+  };
+
+  const signTransaction = async (transaction) => {
+    if (!window.blockchainService) {
+      throw new Error('Blockchain service not initialized');
+    }
+
+    return await window.blockchainService.signTransaction(transaction);
+  };
 
     const fetchWalletBalance = async (address) => {
         try {
@@ -222,22 +258,23 @@ const AppProvider = ({ children }) => {
         }
     };
 
-    const value = {
-        wallet,
-        models,
-        transactions,
-        theme,
-        loading,
-        error,
-        connectWallet,
-        disconnectWallet,
-        fetchModels,
-        publishModel,
-        purchaseModel,
-        downloadModel,
-        toggleTheme,
-        setError
-    };
+  const value = {
+    wallet,
+    models,
+    transactions,
+    theme,
+    loading,
+    error,
+    connectWallet,
+    disconnectWallet,
+    signTransaction,
+    fetchModels,
+    publishModel,
+    purchaseModel,
+    downloadModel,
+    toggleTheme,
+    setError
+  };
 
     return (
         <AppContext.Provider value={value}>
@@ -257,8 +294,35 @@ const useApp = () => {
 
 // Header Component
 const Header = () => {
-    const { wallet, theme, toggleTheme, connectWallet, disconnectWallet, loading } = useApp();
+    const { wallet, theme, toggleTheme, connectWallet, disconnectWallet, loading, error } = useApp();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [showWalletSelector, setShowWalletSelector] = useState(false);
+
+    const availableWallets = [
+        {
+            id: 'pera',
+            name: 'Pera Wallet',
+            icon: '🔐',
+            description: 'Popular Algorand wallet',
+            available: typeof window.PeraWalletConnect !== 'undefined'
+        },
+        {
+            id: 'defly',
+            name: 'Defly Wallet',
+            icon: '🦊',
+            description: 'Secure multi-chain wallet',
+            available: typeof window.DeflyWalletConnect !== 'undefined'
+        }
+    ];
+
+    const handleWalletConnect = async (walletType) => {
+        try {
+            await connectWallet(walletType);
+            setShowWalletSelector(false);
+        } catch (error) {
+            console.error('Wallet connection failed:', error);
+        }
+    };
 
     return (
         <header className="header">
@@ -279,14 +343,22 @@ const Header = () => {
                     {wallet.connected ? (
                         <div className="wallet-connected">
                             <div className="wallet-info">
-                                <span className="wallet-address">
-                                    {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
-                                </span>
-                                <span className="wallet-balance">
-                                    {wallet.balance.toFixed(2)} ALGO
-                                </span>
+                                <div className="wallet-header">
+                                    <span className="wallet-icon">
+                                        {availableWallets.find(w => w.id === wallet.walletType)?.icon || '🔐'}
+                                    </span>
+                                    <span className="wallet-name">
+                                        {availableWallets.find(w => w.id === wallet.walletType)?.name || 'Wallet'}
+                                    </span>
+                                </div>
+                                <div className="wallet-address">
+                                    {wallet.address ? Helpers.truncateAddress(wallet.address) : 'Unknown'}
+                                </div>
+                                <div className="wallet-balance">
+                                    {wallet.balance ? `${wallet.balance.toFixed(2)} ALGO` : 'Loading...'}
+                                </div>
                             </div>
-                            <button 
+                            <button
                                 className="btn btn-secondary"
                                 onClick={disconnectWallet}
                                 disabled={loading}
@@ -295,13 +367,75 @@ const Header = () => {
                             </button>
                         </div>
                     ) : (
-                        <button 
-                            className="btn btn-primary"
-                            onClick={connectWallet}
-                            disabled={loading}
-                        >
-                            {loading ? 'Connecting...' : 'Connect Wallet'}
-                        </button>
+                        <div className="wallet-selector-container">
+                            <button
+                                className="btn btn-primary wallet-connect-btn"
+                                onClick={() => setShowWalletSelector(!showWalletSelector)}
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="spinner-small"></div>
+                                        Connecting...
+                                    </>
+                                ) : (
+                                    'Connect Wallet'
+                                )}
+                            </button>
+
+                            {showWalletSelector && (
+                                <div className="wallet-selector">
+                                    <div className="wallet-selector-header">
+                                        <h4>Choose Wallet</h4>
+                                        <button
+                                            className="close-btn"
+                                            onClick={() => setShowWalletSelector(false)}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+
+                                    <div className="wallet-options">
+                                        {availableWallets.map(wallet => (
+                                            <div
+                                                key={wallet.id}
+                                                className={`wallet-option ${!wallet.available ? 'disabled' : ''}`}
+                                                onClick={() => wallet.available && handleWalletConnect(wallet.id)}
+                                            >
+                                                <div className="wallet-option-icon">
+                                                    {wallet.icon}
+                                                </div>
+                                                <div className="wallet-option-info">
+                                                    <div className="wallet-option-name">
+                                                        {wallet.name}
+                                                    </div>
+                                                    <div className="wallet-option-description">
+                                                        {wallet.description}
+                                                    </div>
+                                                </div>
+                                                {!wallet.available && (
+                                                    <div className="wallet-status">
+                                                        Not Installed
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="wallet-selector-footer">
+                                        <p>New to Algorand wallets?</p>
+                                        <a
+                                            href="https://perawallet.app"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="wallet-link"
+                                        >
+                                            Get Pera Wallet →
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
                     
                     <button 
@@ -376,7 +510,22 @@ const App = () => {
             
             {error && (
                 <div className="error-message">
-                    <strong>Error:</strong> {error}
+                    <div className="error-header">
+                        <strong>Error:</strong>
+                        <button
+                            className="error-close"
+                            onClick={() => setError(null)}
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p>{typeof error === 'string' ? error : error.message || 'An unknown error occurred'}</p>
+                    {error.details && (
+                        <details className="error-details">
+                            <summary>More Details</summary>
+                            <pre>{JSON.stringify(error.details, null, 2)}</pre>
+                        </details>
+                    )}
                 </div>
             )}
             

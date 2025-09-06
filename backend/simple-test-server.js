@@ -5,13 +5,76 @@
 
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const crypto = require('crypto');
+const fs = require('fs-extra');
+const path = require('path');
 
 const app = express();
 const PORT = 3001;
 
+// Create uploads directory
+const uploadsDir = path.join(__dirname, 'uploads');
+fs.ensureDirSync(uploadsDir);
+
+// File upload configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedExtensions = ['.pkl', '.h5', '.pt', '.pth', '.onnx', '.joblib', '.model'];
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    if (allowedExtensions.includes(fileExtension)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file format. Only ML model files are allowed.'));
+    }
+  }
+});
+
+// Encryption utilities
+const encryptFile = (filePath, password) => {
+  const algorithm = 'aes-256-gcm';
+  const key = crypto.scryptSync(password, 'salt', 32);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipher(algorithm, key);
+
+  const input = fs.createReadStream(filePath);
+  const encryptedPath = filePath + '.encrypted';
+  const output = fs.createWriteStream(encryptedPath);
+
+  return new Promise((resolve, reject) => {
+    input.pipe(cipher).pipe(output);
+    output.on('finish', () => {
+      // Create hash for blockchain verification
+      const hash = crypto.createHash('sha256');
+      const stream = fs.createReadStream(encryptedPath);
+      stream.on('data', chunk => hash.update(chunk));
+      stream.on('end', () => {
+        const fileHash = hash.digest('hex');
+        resolve({ encryptedPath, fileHash });
+      });
+    });
+    output.on('error', reject);
+  });
+};
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Mock data
 const mockModels = [
@@ -102,20 +165,102 @@ app.get('/api/models/:id', (req, res) => {
   res.json(model);
 });
 
-// Publish model
-app.post('/api/models/publish', (req, res) => {
-  console.log('📤 POST /api/models/publish - Publishing new model');
-  console.log('Request body:', req.body);
-  
-  // Simulate publishing delay
-  setTimeout(() => {
+// Publish model with file upload and encryption
+app.post('/api/models/publish', upload.single('file'), async (req, res) => {
+  try {
+    console.log('📤 POST /api/models/publish - Publishing new model with encryption');
+    console.log('Request body:', req.body);
+    console.log('Uploaded file:', req.file);
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No model file uploaded' });
+    }
+
+    const { name, description, framework, accuracy, price, category, creator, encrypt } = req.body;
+
+    if (!name || !description || !price || !creator) {
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const modelId = `model_${Date.now()}`;
+    let encryptedHash = null;
+    let finalFilePath = req.file.path;
+
+    // Encrypt file if requested
+    if (encrypt === 'true') {
+      console.log('🔒 Encrypting model file...');
+      const password = crypto.randomBytes(32).toString('hex'); // Generate encryption key
+      const { encryptedPath, fileHash } = await encryptFile(req.file.path, password);
+      
+      // Store encryption key securely (in real app, this would be encrypted with buyer's public key)
+      const encryptionData = {
+        password: password,
+        algorithm: 'aes-256-gcm',
+        originalFilename: req.file.originalname
+      };
+
+      // Save encryption info
+      fs.writeJsonSync(encryptedPath + '.key', encryptionData);
+      
+      // Remove original file
+      fs.unlinkSync(req.file.path);
+      
+      finalFilePath = encryptedPath;
+      encryptedHash = fileHash;
+      console.log('✅ Model file encrypted successfully');
+    }
+
+    // Create new model entry
     const newModel = {
-      modelId: `model_${Date.now()}`,
-      transactionId: `txn_${Date.now()}`
+      id: modelId,
+      name,
+      description,
+      framework: framework || 'Unknown',
+      accuracy: accuracy || 'N/A',
+      priceAlgo: parseFloat(price),
+      category: category || 'Other',
+      creator,
+      filePath: finalFilePath,
+      encryptedHash,
+      encrypted: encrypt === 'true',
+      fileSize: req.file.size,
+      originalFilename: req.file.originalname,
+      createdAt: new Date(),
+      downloads: 0,
+      rating: 0
     };
-    console.log('✅ Model published successfully:', newModel);
-    res.json(newModel);
-  }, 2000);
+
+    // Add to mock models array (in real app, this would go to database)
+    mockModels.push(newModel);
+
+    console.log('✅ Model published successfully:', {
+      modelId,
+      name,
+      encrypted: encrypt === 'true',
+      encryptedHash
+    });
+
+    res.json({
+      success: true,
+      modelId,
+      encryptedHash,
+      message: 'Model uploaded and encrypted successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error publishing model:', error);
+    
+    // Clean up uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(500).json({ 
+      error: 'Failed to publish model: ' + error.message 
+    });
+  }
 });
 
 // Purchase model
