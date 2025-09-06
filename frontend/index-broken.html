@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeSciChain - ML Models Marketplace</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles/darkMode.css">
+    <link rel="stylesheet" href="./styles/darkModeCommon.css">
+    <link rel="stylesheet" href="./styles/lightMode.css">
+    <link rel="stylesheet" href="./styles/lightModeCommon.css">
+    <link rel="stylesheet" href="./styles/app.css">
+    
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/aa7454d09f.js" crossorigin="anonymous"></script>
+    
+    <!-- React and Dependencies -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Algorand SDK -->
+    <script src="https://unpkg.com/algosdk@2.7.0/dist/browser/algosdk.min.js"></script>
+    
+    <!-- Pera Wallet Connect -->
+    <script src="https://unpkg.com/@perawallet/connect@1.4.2/dist/index.js"></script>
+</head>
+<body>
+    <div id="root">
+        <h1>DeSciChain Loading...</h1>
+        <p>If you see this message, the HTML is loading but React is not initializing.</p>
+    </div>
+    
+    <!-- Main App Script -->
+    <!-- <script type="text/babel" src="./js/app.js"></script> -->
+    <!-- <script type="text/babel" src="./js/components/ModelMarketplace.js"></script>
+    <script type="text/babel" src="./js/components/ModelPublisher.js"></script>
+    <script type="text/babel" src="./js/components/PurchaseFlow.js"></script>
+    <script type="text/babel" src="./js/components/ModelDownloader.js"></script>
+    <script type="text/babel" src="./js/components/MyModels.js"></script>
+    <script type="text/babel" src="./js/services/api.js"></script>
+    <script type="text/babel" src="./js/services/blockchain.js"></script>
+    <script type="text/babel" src="./js/utils/helpers.js"></script> -->
+    
+    <script type="text/babel">
+        console.log('Script starting...');
+        console.log('React available:', typeof React);
+        console.log('ReactDOM available:', typeof ReactDOM);
+        
+        const { useState, useEffect, createContext, useContext } = React;
+
+        // Global State Context
+        const AppContext = createContext();
+
+        // App State Provider
+        const AppProvider = ({ children }) => {
+            const [wallet, setWallet] = useState({
+                connected: false,
+                address: null,
+                balance: 0
+            });
+            
+            const [models, setModels] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            // Initialize Algorand client and Pera Wallet
+            const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
+            const [peraWallet, setPeraWallet] = useState(null);
+            
+            // Initialize Pera Wallet when available
+            useEffect(() => {
+                const initializeWallet = async () => {
+                    try {
+                        if (typeof PeraWalletConnect !== 'undefined') {
+                            const wallet = new PeraWalletConnect({ 
+                                chainId: 416002  // TestNet
+                            });
+                            
+                            setPeraWallet(wallet);
+                            console.log('Pera Wallet initialized successfully');
+                        } else {
+                            console.log('PeraWalletConnect not available yet');
+                        }
+                    } catch (err) {
+                        console.error('Failed to initialize Pera Wallet:', err);
+                    }
+                };
+                
+                // Wait a bit for the script to load
+                setTimeout(initializeWallet, 1000);
+                fetchModels();
+            }, []);
+            
+            // Connect to existing wallet session
+            const connectExistingWallet = async (address) => {
+                try {
+                    const accountInfo = await algodClient.accountInformation(address).do();
+                    const balance = accountInfo.amount / 1000000;
+                    
+                    setWallet({
+                        connected: true,
+                        address: address,
+                        balance: balance
+                    });
+                } catch (err) {
+                    console.error('Failed to reconnect wallet:', err);
+                }
+            };
+            
+            // Wallet connection functionality
+            const connectWallet = async () => {
+                try {
+                    setLoading(true);
+                    setError(null);
+                    
+                    if (!peraWallet) {
+                        // Show helpful error message with install links
+                        const installMessage = `Pera Wallet not found!\\n\\nPlease install Pera Wallet:\\n• Mobile: App Store or Google Play\\n• Desktop: Chrome Web Store\\n\\nAfter installation, refresh this page.`;
+                        alert(installMessage);
+                        throw new Error('Pera Wallet not installed');
+                    }
+                    
+                    // Connect to Pera Wallet
+                    const accounts = await peraWallet.connect();
+                    
+                    if (accounts.length === 0) {
+                        throw new Error('No accounts found in wallet');
+                    }
+                    
+                    const accountAddress = accounts[0];
+                    
+                    // Get account info from Algorand
+                    const accountInfo = await algodClient.accountInformation(accountAddress).do();
+                    const balance = accountInfo.amount / 1000000; // Convert microALGOs to ALGOs
+                    
+                    setWallet({
+                        connected: true,
+                        address: accountAddress,
+                        balance: balance
+                    });
+                    
+                    setError(null);
+                } catch (err) {
+                    if (!err.message.includes('Pera Wallet not installed')) {
+                        setError('Failed to connect wallet: ' + err.message);
+                    }
+                    console.error('Wallet connection error:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const disconnectWallet = async () => {
+                try {
+                    if (peraWallet) {
+                        await peraWallet.disconnect();
+                    }
+                } catch (err) {
+                    console.error('Disconnect error:', err);
+                } finally {
+                    setWallet({
+                        connected: false,
+                        address: null,
+                        balance: 0
+                    });
+                }
+            };
+
+            // Fetch models from backend
+            const fetchModels = async () => {
+                try {
+                    setLoading(true);
+                    const response = await fetch('/api/models');
+                    const data = await response.json();
+                    
+                    if (data.success && data.models) {
+                        setModels(data.models);
+                    } else {
+                        // Fallback to mock data if backend doesn't have models
+                        setModels([]);
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch models:', err);
+                    setError('Failed to fetch models from server');
+                    setModels([]); // Use empty array as fallback
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Smart contract constants
+            const ESCROW_APP_ID = 745475660;
+            const MODEL_REGISTRY_APP_ID = 745475657;
+            
+            // Purchase model functionality with real smart contract
+            const purchaseModel = async (model) => {
+                try {
+                    setLoading(true);
+                    setError(null);
+                    
+                    if (!wallet.connected || !peraWallet) {
+                        throw new Error('Please connect your wallet first');
+                    }
+                    
+                    // Get suggested params for transaction
+                    const suggestedParams = await algodClient.getTransactionParams().do();
+                    
+                    // Create application call transaction for escrow contract
+                    const priceInMicroAlgos = Math.floor((model.priceAlgo || 10) * 1000000);
+                    
+                    // Application call to escrow contract
+                    const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
+                        from: wallet.address,
+                        appIndex: ESCROW_APP_ID,
+                        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+                        appArgs: [
+                            new Uint8Array(Buffer.from('purchase')),
+                            algosdk.encodeUint64(model.id)
+                        ],
+                        suggestedParams,
+                        note: new Uint8Array(Buffer.from(`Purchase model: ${model.name}`))
+                    });
+                    
+                    // Payment transaction to contract creator
+                    const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+                        from: wallet.address,
+                        to: 'UZCPSQ7OFDEGTRCMTP2V2G7MKFMZMZ5PUAQS2BSGRLAUQNS337GZC7TYMU', // Contract creator
+                        amount: priceInMicroAlgos,
+                        suggestedParams,
+                        note: new Uint8Array(Buffer.from(`Payment for model: ${model.name}`))
+                    });
+                    
+                    // Group transactions
+                    const txnsToSign = [appCallTxn, paymentTxn];
+                    const groupID = algosdk.computeGroupID(txnsToSign);
+                    for (let i = 0; i < txnsToSign.length; i++) {
+                        txnsToSign[i].group = groupID;
+                    }
+                    
+                    // Sign transactions with Pera Wallet
+                    const signedTxns = await peraWallet.signTransaction([txnsToSign]);
+                    
+                    // Submit transactions
+                    const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
+                    
+                    // Wait for confirmation
+                    const confirmedTxn = await algosdk.waitForConfirmation(algodClient, txId, 4);
+                    
+                    if (confirmedTxn['confirmed-round'] !== null && confirmedTxn['confirmed-round'] > 0) {
+                        alert(`🎉 Purchase Successful!\\n\\nModel: ${model.name}\\nPrice: ${model.price}\\nTransaction ID: ${txId}\\nBlock: ${confirmedTxn['confirmed-round']}\\n\\nCheck AlgoExplorer for details!`);
+                        
+                        // Update wallet balance
+                        const accountInfo = await algodClient.accountInformation(wallet.address).do();
+                        setWallet(prev => ({
+                            ...prev,
+                            balance: accountInfo.amount / 1000000
+                        }));
+                        
+                        // Call backend API for purchase record
+                        try {
+                            const response = await fetch('/api/models/purchase', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    modelId: model.id,
+                                    buyerAddress: wallet.address,
+                                    price: model.priceAlgo || 10,
+                                    transactionId: txId,
+                                    blockNumber: confirmedTxn['confirmed-round']
+                                })
+                            });
+                            const result = await response.json();
+                            console.log('Backend purchase result:', result);
+                        } catch (backendErr) {
+                            console.warn('Backend call failed:', backendErr);
+                        }
+                        
+                        return { success: true, transactionId: txId };
+                    } else {
+                        throw new Error('Transaction failed to confirm');
+                    }
+                } catch (err) {
+                    if (err.message.includes('cancelled')) {
+                        setError('Transaction was cancelled by user');
+                    } else {
+                        setError('Purchase failed: ' + err.message);
+                    }
+                    throw err;
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Publish model functionality  
+            const publishModel = async (modelData) => {
+                try {
+                    setLoading(true);
+                    setError(null);
+                    
+                    if (!wallet.connected) {
+                        throw new Error('Please connect your wallet first');
+                    }
+                    
+                    const formData = new FormData();
+                    if (modelData.file) {
+                        formData.append('model', modelData.file);
+                    }
+                    formData.append('name', modelData.name);
+                    formData.append('description', modelData.description);
+                    formData.append('framework', modelData.framework);
+                    formData.append('price', modelData.price);
+                    formData.append('labId', 'user-lab');
+                    formData.append('ownerInfo', wallet.address);
+                    formData.append('publisherAddress', wallet.address);
+                    
+                    const response = await fetch('/api/models/publish', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert('Model published successfully!');
+                        fetchModels(); // Refresh models list
+                        return result;
+                    } else {
+                        throw new Error(result.error || 'Failed to publish model');
+                    }
+                } catch (err) {
+                    setError(err.message);
+                    throw err;
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+
+            const value = {
+                wallet,
+                models,
+                loading,
+                error,
+                connectWallet,
+                disconnectWallet,
+                fetchModels,
+                purchaseModel,
+                publishModel,
+                setError
+            };
+
+            return (
+                <AppContext.Provider value={value}>
+                    {children}
+                </AppContext.Provider>
+            );
+        };
+
+        // Custom hook to use app context
+        const useApp = () => {
+            const context = useContext(AppContext);
+            if (!context) {
+                throw new Error('useApp must be used within AppProvider');
+            }
+            return context;
+        };
+
+        // Enhanced Header Component
+        const Header = ({ currentView, setCurrentView }) => {
+            const { wallet, connectWallet, disconnectWallet, loading, setError } = useApp();
+            
+            return (
+                <header style={{
+                    padding: '20px',
+                    backgroundColor: '#1a1a2e',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                }}>
+                    <div>
+                        <h1 style={{margin: '0', fontSize: '24px'}}>DeSciChain</h1>
+                        <p style={{margin: '5px 0 0 0', opacity: '0.8'}}>ML Models Marketplace</p>
+                    </div>
+                    
+                    <nav style={{display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap'}}>
+                        <button 
+                            style={{
+                                background: currentView === 'marketplace' ? '#4caf50' : 'transparent',
+                                color: 'white',
+                                border: '1px solid #4caf50',
+                                padding: '8px 16px',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                            onClick={() => setCurrentView('marketplace')}
+                        >
+                            Marketplace
+                        </button>
+                        <button 
+                            style={{
+                                background: currentView === 'publish' ? '#4caf50' : 'transparent',
+                                color: 'white',
+                                border: '1px solid #4caf50',
+                                padding: '8px 16px',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                            onClick={() => setCurrentView('publish')}
+                        >
+                            Publish Model
+                        </button>
+                    </nav>
+                    
+                    <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                        {wallet.connected ? (
+                            <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                                <div style={{textAlign: 'right'}}>
+                                    <div style={{fontSize: '14px', opacity: '0.8'}}>
+                                        {wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}
+                                    </div>
+                                    <div style={{fontSize: '16px', fontWeight: 'bold', color: '#4caf50'}}>
+                                        {wallet.balance.toFixed(2)} ALGO
+                                    </div>
+                                </div>
+                                <button
+                                    style={{
+                                        backgroundColor: '#f44336',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '10px 16px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px'
+                                    }}
+                                    onClick={disconnectWallet}
+                                    disabled={loading}
+                                >
+                                    Disconnect
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                {!peraWallet && (
+                                    <span style={{color: '#ff9800', fontSize: '12px'}}>
+                                        Pera Wallet Required
+                                    </span>
+                                )}
+                                <button
+                                    style={{
+                                        backgroundColor: peraWallet ? '#4caf50' : '#ff9800',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '12px 20px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '16px',
+                                        fontWeight: 'bold'
+                                    }}
+                                    onClick={connectWallet}
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Connecting...' : peraWallet ? 'Connect Wallet' : 'Install Pera Wallet'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </header>
+            );
+        };
+
+        // Enhanced Marketplace Component  
+        const SimpleMarketplace = () => {
+            const { models, purchaseModel, loading, wallet } = useApp();
+            const [selectedModel, setSelectedModel] = useState(null);
+            const [purchasing, setPurchasing] = useState(false);
+            
+            // Fallback models if backend has no data
+            const fallbackModels = [
+                {
+                    id: 1,
+                    name: "Neural Network for Image Classification",
+                    description: "Convolutional Neural Network trained on ImageNet dataset. Achieves 94% accuracy on test set.",
+                    framework: "TensorFlow",
+                    price: "10 ALGO",
+                    priceAlgo: 10,
+                    accuracy: "94%",
+                    author: "Dr. Smith Labs"
+                },
+                {
+                    id: 2,
+                    name: "Natural Language Processing Model",
+                    description: "BERT-based model fine-tuned for sentiment analysis. Supports 5 languages.",
+                    framework: "PyTorch",
+                    price: "15 ALGO",
+                    priceAlgo: 15,
+                    accuracy: "97%",
+                    author: "AI Research Corp"
+                },
+                {
+                    id: 3,
+                    name: "Time Series Forecasting Model",
+                    description: "LSTM neural network for stock price prediction with technical indicators.",
+                    framework: "Keras",
+                    price: "8 ALGO",
+                    priceAlgo: 8,
+                    accuracy: "89%",
+                    author: "QuantLab"
+                }
+            ];
+
+            // Use backend models if available, otherwise fallback
+            const displayModels = models.length > 0 ? models : fallbackModels;
+
+            const handlePurchase = async (model) => {
+                if (!wallet.connected) {
+                    alert('Please connect your wallet first');
+                    return;
+                }
+                
+                try {
+                    setPurchasing(true);
+                    await purchaseModel(model);
+                    setSelectedModel(null);
+                } catch (err) {
+                    console.error('Purchase failed:', err);
+                } finally {
+                    setPurchasing(false);
+                }
+            };
+
+            return (
+                <div style={{padding: '20px', backgroundColor: '#f5f5f5', minHeight: '70vh'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px'}}>
+                        <div>
+                            <h2 style={{color: '#333', margin: '0', fontSize: '28px'}}>ML Models Marketplace</h2>
+                            <p style={{color: '#666', margin: '5px 0 0 0'}}>Browse and purchase cutting-edge machine learning models</p>
+                        </div>
+                        <div style={{color: '#666', fontSize: '14px'}}>
+                            {displayModels.length} models available
+                        </div>
+                    </div>
+                    
+                    {loading && (
+                        <div style={{textAlign: 'center', padding: '40px'}}>
+                            <div style={{fontSize: '18px', color: '#666'}}>Loading models...</div>
+                        </div>
+                    )}
+                    
+                    <div style={{display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))'}}>
+                        {displayModels.map(model => (
+                            <div key={model.id} style={{
+                                border: '1px solid #ddd',
+                                padding: '20px',
+                                borderRadius: '8px',
+                                backgroundColor: 'white',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                                e.target.style.transform = 'translateY(-2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                                e.target.style.transform = 'translateY(0)';
+                            }}
+                            onClick={() => setSelectedModel(model)}>
+                                <h3 style={{color: '#1a1a2e', marginBottom: '10px', fontSize: '18px'}}>{model.name}</h3>
+                                <p style={{color: '#555', marginBottom: '15px', lineHeight: '1.5'}}>{model.description}</p>
+                                
+                                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
+                                    <span style={{color: '#888', fontSize: '14px'}}>Framework: <strong style={{color: '#333'}}>{model.framework}</strong></span>
+                                    <span style={{color: '#888', fontSize: '14px'}}>Accuracy: <strong style={{color: '#4caf50'}}>{model.accuracy}</strong></span>
+                                </div>
+                                
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px'}}>
+                                    <span style={{color: '#666', fontSize: '14px'}}>by {model.author}</span>
+                                    <span style={{color: '#1a1a2e', fontSize: '18px', fontWeight: 'bold'}}>{model.price}</span>
+                                </div>
+                                
+                                <button style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    marginTop: '15px',
+                                    backgroundColor: wallet.connected ? '#4caf50' : '#ccc',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: wallet.connected ? 'pointer' : 'not-allowed',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    opacity: purchasing ? '0.7' : '1'
+                                }}
+                                disabled={!wallet.connected || purchasing}
+                                onMouseEnter={(e) => {
+                                    if (wallet.connected && !purchasing) {
+                                        e.target.style.backgroundColor = '#45a049'
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (wallet.connected) {
+                                        e.target.style.backgroundColor = '#4caf50'
+                                    }
+                                }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePurchase(model);
+                                }}>
+                                    {purchasing ? 'Processing...' : 
+                                     wallet.connected ? 'Purchase Model' : 'Connect Wallet First'}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    {selectedModel && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1000
+                        }}
+                        onClick={() => setSelectedModel(null)}>
+                            <div style={{
+                                backgroundColor: 'white',
+                                padding: '30px',
+                                borderRadius: '8px',
+                                maxWidth: '500px',
+                                width: '90%'
+                            }}
+                            onClick={(e) => e.stopPropagation()}>
+                                <h3 style={{color: '#1a1a2e', marginBottom: '15px'}}>{selectedModel.name}</h3>
+                                <p style={{color: '#555', marginBottom: '20px'}}>{selectedModel.description}</p>
+                                <p style={{color: '#888', marginBottom: '20px'}}>Framework: {selectedModel.framework} | Accuracy: {selectedModel.accuracy}</p>
+                                <p style={{color: '#888', marginBottom: '20px'}}>Author: {selectedModel.author}</p>
+                                <p style={{fontSize: '20px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '20px'}}>Price: {selectedModel.price}</p>
+                                
+                                <div style={{display: 'flex', gap: '10px'}}>
+                                    <button style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: wallet.connected ? '#4caf50' : '#ccc',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: wallet.connected ? 'pointer' : 'not-allowed',
+                                        fontSize: '16px'
+                                    }}
+                                    disabled={!wallet.connected || purchasing}
+                                    onClick={() => handlePurchase(selectedModel)}>
+                                        {purchasing ? 'Processing...' : 
+                                         wallet.connected ? 'Purchase Now' : 'Connect Wallet First'}
+                                    </button>
+                                    <button style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: '#f44336',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '16px'
+                                    }}
+                                    onClick={() => setSelectedModel(null)}>
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Model Publisher Component
+        const ModelPublisher = () => {
+            const { publishModel, wallet, loading } = useApp();
+            const [formData, setFormData] = useState({
+                name: '',
+                description: '',
+                framework: 'TensorFlow',
+                price: '10',
+                file: null
+            });
+            const [publishing, setPublishing] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                
+                if (!wallet.connected) {
+                    alert('Please connect your wallet first');
+                    return;
+                }
+                
+                if (!formData.name || !formData.description) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+                
+                try {
+                    setPublishing(true);
+                    await publishModel(formData);
+                    setFormData({
+                        name: '',
+                        description: '',
+                        framework: 'TensorFlow',
+                        price: '10',
+                        file: null
+                    });
+                } catch (err) {
+                    console.error('Publishing failed:', err);
+                } finally {
+                    setPublishing(false);
+                }
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                setFormData(prev => ({ ...prev, file }));
+            };
+
+            return (
+                <div style={{padding: '20px', backgroundColor: '#f5f5f5', minHeight: '70vh'}}>
+                    <h2 style={{color: '#333', marginBottom: '20px', fontSize: '28px'}}>Publish ML Model</h2>
+                    <p style={{color: '#666', marginBottom: '30px'}}>Share your machine learning model with the community</p>
+                    
+                    {!wallet.connected ? (
+                        <div style={{
+                            textAlign: 'center',
+                            padding: '60px 20px',
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            border: '1px solid #ddd'
+                        }}>
+                            <h3 style={{color: '#666', marginBottom: '20px'}}>Connect your wallet to publish models</h3>
+                            <p style={{color: '#888'}}>You need to connect your Algorand wallet to publish and monetize your ML models.</p>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleSubmit} style={{
+                            backgroundColor: 'white',
+                            padding: '30px',
+                            borderRadius: '8px',
+                            border: '1px solid #ddd',
+                            maxWidth: '600px'
+                        }}>
+                            <div style={{marginBottom: '20px'}}>
+                                <label style={{display: 'block', marginBottom: '8px', color: '#333', fontWeight: 'bold'}}>
+                                    Model Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '6px',
+                                        fontSize: '16px'
+                                    }}
+                                    placeholder="Enter model name"
+                                    required
+                                />
+                            </div>
+
+                            <div style={{marginBottom: '20px'}}>
+                                <label style={{display: 'block', marginBottom: '8px', color: '#333', fontWeight: 'bold'}}>
+                                    Description *
+                                </label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '6px',
+                                        fontSize: '16px',
+                                        minHeight: '100px',
+                                        resize: 'vertical'
+                                    }}
+                                    placeholder="Describe your model, its capabilities, and use cases"
+                                    required
+                                />
+                            </div>
+
+                            <div style={{display: 'flex', gap: '20px', marginBottom: '20px'}}>
+                                <div style={{flex: 1}}>
+                                    <label style={{display: 'block', marginBottom: '8px', color: '#333', fontWeight: 'bold'}}>
+                                        Framework
+                                    </label>
+                                    <select
+                                        value={formData.framework}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, framework: e.target.value }))}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '6px',
+                                            fontSize: '16px'
+                                        }}
+                                    >
+                                        <option value="TensorFlow">TensorFlow</option>
+                                        <option value="PyTorch">PyTorch</option>
+                                        <option value="Keras">Keras</option>
+                                        <option value="Scikit-learn">Scikit-learn</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div style={{flex: 1}}>
+                                    <label style={{display: 'block', marginBottom: '8px', color: '#333', fontWeight: 'bold'}}>
+                                        Price (ALGO)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        value={formData.price}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '6px',
+                                            fontSize: '16px'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{marginBottom: '20px'}}>
+                                <label style={{display: 'block', marginBottom: '8px', color: '#333', fontWeight: 'bold'}}>
+                                    Model File
+                                </label>
+                                <input
+                                    type="file"
+                                    onChange={handleFileChange}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '6px',
+                                        fontSize: '16px'
+                                    }}
+                                    accept=".h5,.pkl,.pt,.onnx,.pb,.json"
+                                />
+                                <p style={{fontSize: '14px', color: '#888', margin: '5px 0 0 0'}}>
+                                    Supported formats: .h5, .pkl, .pt, .onnx, .pb, .json
+                                </p>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={publishing || loading}
+                                style={{
+                                    width: '100%',
+                                    padding: '15px',
+                                    backgroundColor: publishing ? '#ccc' : '#4caf50',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '18px',
+                                    fontWeight: 'bold',
+                                    cursor: publishing ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {publishing ? 'Publishing Model...' : 'Publish Model'}
+                            </button>
+                        </form>
+                    )}
+                </div>
+            );
+        };
+
+        // Main App Component
+        const App = () => {
+            const { loading, error } = useApp();
+            const [currentView, setCurrentView] = useState('marketplace');
+            
+            const renderView = () => {
+                switch (currentView) {
+                    case 'marketplace':
+                        return <SimpleMarketplace />;
+                    case 'publish':
+                        return <ModelPublisher />;
+                    default:
+                        return <SimpleMarketplace />;
+                }
+            };
+            
+            return (
+                <div>
+                    <Header currentView={currentView} setCurrentView={setCurrentView} />
+                    
+                    {error && (
+                        <div style={{
+                            padding: '15px',
+                            backgroundColor: '#ffebee',
+                            color: '#c62828',
+                            margin: '0 20px',
+                            borderRadius: '6px',
+                            border: '1px solid #ffcdd2'
+                        }}>
+                            <strong>Error:</strong> {error}
+                            <button 
+                                style={{
+                                    float: 'right',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#c62828',
+                                    cursor: 'pointer',
+                                    fontSize: '18px'
+                                }}
+                                onClick={() => setError(null)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
+                    
+                    {renderView()}
+                </div>
+            );
+        };
+
+        // Render the app
+        ReactDOM.render(
+            <AppProvider>
+                <App />
+            </AppProvider>,
+            document.getElementById('root')
+        );
+    </script>
+</body>
+</html>

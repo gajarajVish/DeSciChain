@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeSciChain - ML Models Marketplace</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles/darkMode.css">
+    <link rel="stylesheet" href="./styles/darkModeCommon.css">
+    <link rel="stylesheet" href="./styles/lightMode.css">
+    <link rel="stylesheet" href="./styles/lightModeCommon.css">
+    <link rel="stylesheet" href="./styles/app.css">
+    
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/aa7454d09f.js" crossorigin="anonymous"></script>
+    
+    <!-- React and Dependencies -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Algorand SDK -->
+    <script src="https://unpkg.com/algosdk@2.7.0/dist/browser/algosdk.min.js"></script>
+    
+    <!-- Pera Wallet Connect -->
+    <script src="https://unpkg.com/@perawallet/connect@1.4.2/dist/index.js"></script>
+</head>
+<body>
+    <div id="root">
+        <h1>DeSciChain Loading...</h1>
+        <p>Initializing DeSciChain ML Models Marketplace...</p>
+    </div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, createContext, useContext } = React;
+
+        // Global State Context
+        const AppContext = createContext();
+
+        // Smart Contract Constants
+        const ESCROW_APP_ID = 745475660;
+        const MODEL_REGISTRY_APP_ID = 745475657;
+        const CONTRACT_CREATOR = 'UZCPSQ7OFDEGTRCMTP2V2G7MKFMZMZ5PUAQS2BSGRLAUQNS337GZC7TYMU';
+
+        // App State Provider
+        const AppProvider = ({ children }) => {
+            const [wallet, setWallet] = useState({
+                connected: false,
+                address: null,
+                balance: 0
+            });
+            
+            const [models, setModels] = useState([]);
+            const [peraWallet, setPeraWallet] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            // Initialize Algorand client
+            const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
+
+            // Initialize Pera Wallet
+            useEffect(() => {
+                const initWallet = async () => {
+                    try {
+                        // Wait for PeraWalletConnect to be available
+                        let attempts = 0;
+                        while (typeof PeraWalletConnect === 'undefined' && attempts < 10) {
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                            attempts++;
+                        }
+
+                        if (typeof PeraWalletConnect !== 'undefined') {
+                            const wallet = new PeraWalletConnect({
+                                chainId: 416002 // TestNet
+                            });
+                            setPeraWallet(wallet);
+                            console.log('✅ Pera Wallet initialized');
+
+                            // Try to reconnect existing session
+                            try {
+                                const accounts = await wallet.reconnectSession();
+                                if (accounts.length > 0) {
+                                    await connectExistingWallet(accounts[0]);
+                                }
+                            } catch (err) {
+                                console.log('No existing wallet session');
+                            }
+                        } else {
+                            console.warn('❌ Pera Wallet not available');
+                        }
+                    } catch (err) {
+                        console.error('Failed to initialize Pera Wallet:', err);
+                    }
+                };
+
+                initWallet();
+                fetchModels();
+            }, []);
+
+            // Connect to existing wallet session
+            const connectExistingWallet = async (address) => {
+                try {
+                    const accountInfo = await algodClient.accountInformation(address).do();
+                    const balance = accountInfo.amount / 1000000;
+                    
+                    setWallet({
+                        connected: true,
+                        address: address,
+                        balance: balance
+                    });
+                    console.log('✅ Wallet reconnected:', address);
+                } catch (err) {
+                    console.error('Failed to reconnect wallet:', err);
+                }
+            };
+
+            // Connect wallet
+            const connectWallet = async () => {
+                try {
+                    setLoading(true);
+                    setError(null);
+
+                    if (!peraWallet) {
+                        alert('Please install Pera Wallet:\\n\\n• Mobile: App Store/Google Play\\n• Desktop: Chrome Web Store\\n\\nAfter installation, refresh this page.');
+                        return;
+                    }
+
+                    const accounts = await peraWallet.connect();
+                    if (accounts.length === 0) {
+                        throw new Error('No accounts found');
+                    }
+
+                    const address = accounts[0];
+                    const accountInfo = await algodClient.accountInformation(address).do();
+                    const balance = accountInfo.amount / 1000000;
+
+                    setWallet({
+                        connected: true,
+                        address: address,
+                        balance: balance
+                    });
+
+                    console.log('✅ Wallet connected:', address);
+                } catch (err) {
+                    setError('Failed to connect wallet: ' + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Disconnect wallet
+            const disconnectWallet = async () => {
+                try {
+                    if (peraWallet) {
+                        await peraWallet.disconnect();
+                    }
+                } catch (err) {
+                    console.error('Disconnect error:', err);
+                }
+                setWallet({ connected: false, address: null, balance: 0 });
+            };
+
+            // Fetch models from backend
+            const fetchModels = async () => {
+                try {
+                    setLoading(true);
+                    const response = await fetch('/api/models');
+                    const data = await response.json();
+                    
+                    if (data.success && data.models && data.models.length > 0) {
+                        setModels(data.models);
+                        console.log('✅ Loaded', data.models.length, 'models from backend');
+                    } else {
+                        // Use sample data if backend has no models
+                        const sampleModels = [
+                            {
+                                id: 1,
+                                name: "Neural Network for Image Classification",
+                                description: "Convolutional Neural Network trained on ImageNet dataset. Achieves 94% accuracy on test set. Includes trained weights and preprocessing pipeline.",
+                                framework: "TensorFlow",
+                                price: "10 ALGO",
+                                priceAlgo: 10,
+                                accuracy: "94%",
+                                author: "Dr. Smith Labs",
+                                fileUrl: "/api/models/download/1",
+                                fileSize: "45.2 MB",
+                                downloads: 127
+                            },
+                            {
+                                id: 2,
+                                name: "BERT Sentiment Analysis Model",
+                                description: "Fine-tuned BERT model for sentiment analysis supporting 5 languages. Trained on 100k+ reviews with advanced preprocessing.",
+                                framework: "PyTorch",
+                                price: "15 ALGO",
+                                priceAlgo: 15,
+                                accuracy: "97%",
+                                author: "AI Research Corp",
+                                fileUrl: "/api/models/download/2",
+                                fileSize: "1.2 GB",
+                                downloads: 89
+                            },
+                            {
+                                id: 3,
+                                name: "Stock Price Prediction LSTM",
+                                description: "LSTM neural network for stock price forecasting with technical indicators. Includes feature engineering pipeline.",
+                                framework: "Keras",
+                                price: "8 ALGO",
+                                priceAlgo: 8,
+                                accuracy: "89%",
+                                author: "QuantLab",
+                                fileUrl: "/api/models/download/3",
+                                fileSize: "23.7 MB",
+                                downloads: 203
+                            }
+                        ];
+                        setModels(sampleModels);
+                        console.log('✅ Loaded sample models (backend unavailable)');
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch models:', err);
+                    setError('Failed to load models');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Purchase model with smart contract
+            const purchaseModel = async (model) => {
+                try {
+                    setLoading(true);
+                    setError(null);
+
+                    if (!wallet.connected || !peraWallet) {
+                        throw new Error('Please connect your wallet first');
+                    }
+
+                    console.log('🚀 Starting purchase for model:', model.name);
+
+                    // Get transaction parameters
+                    const suggestedParams = await algodClient.getTransactionParams().do();
+                    const priceInMicroAlgos = Math.floor(model.priceAlgo * 1000000);
+
+                    // Create application call transaction
+                    const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
+                        from: wallet.address,
+                        appIndex: ESCROW_APP_ID,
+                        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+                        appArgs: [
+                            new Uint8Array(Buffer.from('purchase')),
+                            algosdk.encodeUint64(model.id)
+                        ],
+                        suggestedParams,
+                        note: new Uint8Array(Buffer.from(`Purchase: ${model.name}`))
+                    });
+
+                    // Create payment transaction
+                    const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+                        from: wallet.address,
+                        to: CONTRACT_CREATOR,
+                        amount: priceInMicroAlgos,
+                        suggestedParams,
+                        note: new Uint8Array(Buffer.from(`Payment: ${model.name}`))
+                    });
+
+                    // Group transactions
+                    const txnsToSign = [appCallTxn, paymentTxn];
+                    const groupID = algosdk.computeGroupID(txnsToSign);
+                    txnsToSign.forEach(txn => txn.group = groupID);
+
+                    // Sign with Pera Wallet
+                    const signedTxns = await peraWallet.signTransaction([txnsToSign]);
+
+                    // Submit to network
+                    const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
+                    console.log('📡 Transaction submitted:', txId);
+
+                    // Wait for confirmation
+                    const confirmedTxn = await algosdk.waitForConfirmation(algodClient, txId, 4);
+                    
+                    if (confirmedTxn['confirmed-round']) {
+                        // Update wallet balance
+                        const accountInfo = await algodClient.accountInformation(wallet.address).do();
+                        setWallet(prev => ({
+                            ...prev,
+                            balance: accountInfo.amount / 1000000
+                        }));
+
+                        // Record purchase in backend
+                        try {
+                            await fetch('/api/models/purchase', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    modelId: model.id,
+                                    buyerAddress: wallet.address,
+                                    price: model.priceAlgo,
+                                    transactionId: txId,
+                                    blockNumber: confirmedTxn['confirmed-round']
+                                })
+                            });
+                        } catch (backendErr) {
+                            console.warn('Backend recording failed:', backendErr);
+                        }
+
+                        alert(`🎉 Purchase Successful!\\n\\nModel: ${model.name}\\nPrice: ${model.price}\\nTransaction: ${txId}\\nBlock: ${confirmedTxn['confirmed-round']}\\n\\nYou can now download the model files!`);
+                        
+                        return { success: true, transactionId: txId };
+                    }
+                } catch (err) {
+                    const errorMsg = err.message.includes('cancelled') ? 
+                        'Transaction cancelled by user' : 
+                        'Purchase failed: ' + err.message;
+                    setError(errorMsg);
+                    throw err;
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Download model files
+            const downloadModel = async (model) => {
+                try {
+                    setLoading(true);
+                    setError(null);
+
+                    if (!wallet.connected) {
+                        throw new Error('Please connect wallet to download models');
+                    }
+
+                    console.log('📥 Starting download for:', model.name);
+
+                    // Call download API
+                    const response = await fetch(`/api/models/download/${model.id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            buyerAddress: wallet.address,
+                            modelId: model.id
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Download failed');
+                    }
+
+                    // Create download link
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${model.name.replace(/[^a-zA-Z0-9]/g, '_')}_model.parquet`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    console.log('✅ Download completed');
+                    alert(`✅ Download Started!\\n\\nFile: ${model.name} model data\\nCheck your Downloads folder for the .parquet file`);
+
+                } catch (err) {
+                    setError('Download failed: ' + err.message);
+                    console.error('Download error:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const value = {
+                wallet,
+                models,
+                loading,
+                error,
+                connectWallet,
+                disconnectWallet,
+                fetchModels,
+                purchaseModel,
+                downloadModel,
+                setError
+            };
+
+            return (
+                <AppContext.Provider value={value}>
+                    {children}
+                </AppContext.Provider>
+            );
+        };
+
+        // Custom hook
+        const useApp = () => {
+            const context = useContext(AppContext);
+            if (!context) {
+                throw new Error('useApp must be used within AppProvider');
+            }
+            return context;
+        };
+
+        // Header Component
+        const Header = () => {
+            const { wallet, connectWallet, disconnectWallet, loading } = useApp();
+
+            return (
+                <header style={{
+                    padding: '20px',
+                    backgroundColor: '#1a1a2e',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                }}>
+                    <div>
+                        <h1 style={{margin: '0', fontSize: '24px'}}>🔬 DeSciChain</h1>
+                        <p style={{margin: '5px 0 0 0', opacity: '0.8'}}>Decentralized ML Models Marketplace</p>
+                    </div>
+
+                    <div>
+                        {wallet.connected ? (
+                            <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                                <div style={{textAlign: 'right'}}>
+                                    <div style={{fontSize: '14px', opacity: '0.8'}}>
+                                        {wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}
+                                    </div>
+                                    <div style={{fontSize: '16px', fontWeight: 'bold', color: '#4caf50'}}>
+                                        {wallet.balance.toFixed(2)} ALGO
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={disconnectWallet}
+                                    style={{
+                                        backgroundColor: '#f44336',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '10px 16px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Disconnect
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={connectWallet}
+                                disabled={loading}
+                                style={{
+                                    backgroundColor: '#4caf50',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '12px 20px',
+                                    borderRadius: '6px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    opacity: loading ? 0.7 : 1
+                                }}
+                            >
+                                {loading ? '🔄 Connecting...' : '🔗 Connect Pera Wallet'}
+                            </button>
+                        )}
+                    </div>
+                </header>
+            );
+        };
+
+        // Marketplace Component
+        const Marketplace = () => {
+            const { models, wallet, purchaseModel, downloadModel, loading, error } = useApp();
+            const [selectedModel, setSelectedModel] = useState(null);
+
+            return (
+                <div style={{padding: '20px', backgroundColor: '#f5f5f5', minHeight: '80vh'}}>
+                    <div style={{marginBottom: '30px'}}>
+                        <h2 style={{color: '#333', margin: '0', fontSize: '28px'}}>🤖 ML Models Marketplace</h2>
+                        <p style={{color: '#666', margin: '5px 0 0 0'}}>
+                            Buy, sell, and download machine learning models on Algorand TestNet
+                        </p>
+                        <div style={{fontSize: '14px', color: '#888', marginTop: '10px'}}>
+                            📊 {models.length} models available • 🔗 Connected to TestNet • 📱 Smart Contracts: {ESCROW_APP_ID}
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div style={{
+                            padding: '15px',
+                            backgroundColor: '#ffebee',
+                            color: '#c62828',
+                            borderRadius: '6px',
+                            marginBottom: '20px',
+                            border: '1px solid #ffcdd2'
+                        }}>
+                            <strong>⚠️ Error:</strong> {error}
+                            <button 
+                                style={{
+                                    float: 'right',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#c62828',
+                                    cursor: 'pointer',
+                                    fontSize: '18px'
+                                }}
+                                onClick={() => setError(null)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
+
+                    <div style={{display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))'}}>
+                        {models.map(model => (
+                            <div key={model.id} style={{
+                                border: '1px solid #ddd',
+                                padding: '25px',
+                                borderRadius: '12px',
+                                backgroundColor: 'white',
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                transition: 'all 0.3s ease',
+                                cursor: 'pointer'
+                            }}
+                            onClick={() => setSelectedModel(model)}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                            }}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px'}}>
+                                    <h3 style={{color: '#1a1a2e', margin: '0', fontSize: '20px', lineHeight: '1.3'}}>
+                                        {model.name}
+                                    </h3>
+                                    <span style={{
+                                        backgroundColor: '#e3f2fd',
+                                        color: '#1976d2',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {model.framework}
+                                    </span>
+                                </div>
+
+                                <p style={{color: '#555', marginBottom: '20px', lineHeight: '1.5', fontSize: '14px'}}>
+                                    {model.description}
+                                </p>
+
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px'}}>
+                                    <div>
+                                        <div style={{fontSize: '12px', color: '#888', marginBottom: '4px'}}>ACCURACY</div>
+                                        <div style={{fontSize: '16px', fontWeight: 'bold', color: '#4caf50'}}>{model.accuracy}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{fontSize: '12px', color: '#888', marginBottom: '4px'}}>DOWNLOADS</div>
+                                        <div style={{fontSize: '16px', fontWeight: 'bold', color: '#ff9800'}}>{model.downloads || 0}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{fontSize: '12px', color: '#888', marginBottom: '4px'}}>FILE SIZE</div>
+                                        <div style={{fontSize: '16px', fontWeight: 'bold', color: '#9c27b0'}}>{model.fileSize || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{fontSize: '12px', color: '#888', marginBottom: '4px'}}>AUTHOR</div>
+                                        <div style={{fontSize: '16px', fontWeight: 'bold', color: '#607d8b'}}>{model.author}</div>
+                                    </div>
+                                </div>
+
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                                    <span style={{fontSize: '24px', fontWeight: 'bold', color: '#1a1a2e'}}>
+                                        💰 {model.price}
+                                    </span>
+                                </div>
+
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            purchaseModel(model);
+                                        }}
+                                        disabled={!wallet.connected || loading}
+                                        style={{
+                                            padding: '12px',
+                                            backgroundColor: wallet.connected ? '#4caf50' : '#ccc',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: wallet.connected && !loading ? 'pointer' : 'not-allowed',
+                                            fontSize: '14px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        {loading ? '⏳ Processing...' : 
+                                         wallet.connected ? '💳 Purchase' : '🔗 Connect First'}
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            downloadModel(model);
+                                        }}
+                                        disabled={!wallet.connected || loading}
+                                        style={{
+                                            padding: '12px',
+                                            backgroundColor: wallet.connected ? '#2196f3' : '#ccc',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: wallet.connected && !loading ? 'pointer' : 'not-allowed',
+                                            fontSize: '14px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        {loading ? '📥 Loading...' : '📥 Download'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Model Detail Modal */}
+                    {selectedModel && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(0,0,0,0.7)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1000,
+                            padding: '20px'
+                        }}
+                        onClick={() => setSelectedModel(null)}>
+                            <div style={{
+                                backgroundColor: 'white',
+                                padding: '30px',
+                                borderRadius: '12px',
+                                maxWidth: '600px',
+                                width: '100%',
+                                maxHeight: '80vh',
+                                overflow: 'auto'
+                            }}
+                            onClick={(e) => e.stopPropagation()}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px'}}>
+                                    <h3 style={{color: '#1a1a2e', margin: '0', fontSize: '24px'}}>{selectedModel.name}</h3>
+                                    <button
+                                        onClick={() => setSelectedModel(null)}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            fontSize: '24px',
+                                            cursor: 'pointer',
+                                            color: '#999'
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+
+                                <p style={{color: '#555', marginBottom: '25px', lineHeight: '1.6'}}>
+                                    {selectedModel.description}
+                                </p>
+
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px'}}>
+                                    <div>
+                                        <strong>Framework:</strong> {selectedModel.framework}<br/>
+                                        <strong>Accuracy:</strong> <span style={{color: '#4caf50'}}>{selectedModel.accuracy}</span><br/>
+                                        <strong>File Size:</strong> {selectedModel.fileSize || 'N/A'}
+                                    </div>
+                                    <div>
+                                        <strong>Author:</strong> {selectedModel.author}<br/>
+                                        <strong>Downloads:</strong> {selectedModel.downloads || 0}<br/>
+                                        <strong>Price:</strong> <span style={{fontSize: '18px', color: '#1a1a2e'}}>{selectedModel.price}</span>
+                                    </div>
+                                </div>
+
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+                                    <button
+                                        onClick={() => {
+                                            purchaseModel(selectedModel);
+                                            setSelectedModel(null);
+                                        }}
+                                        disabled={!wallet.connected || loading}
+                                        style={{
+                                            padding: '15px',
+                                            backgroundColor: wallet.connected ? '#4caf50' : '#ccc',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: wallet.connected && !loading ? 'pointer' : 'not-allowed',
+                                            fontSize: '16px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        💳 Purchase Model
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            downloadModel(selectedModel);
+                                            setSelectedModel(null);
+                                        }}
+                                        disabled={!wallet.connected || loading}
+                                        style={{
+                                            padding: '15px',
+                                            backgroundColor: wallet.connected ? '#2196f3' : '#ccc',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: wallet.connected && !loading ? 'pointer' : 'not-allowed',
+                                            fontSize: '16px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        📥 Download Files
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Main App
+        const App = () => {
+            return (
+                <div>
+                    <Header />
+                    <Marketplace />
+                </div>
+            );
+        };
+
+        // Render
+        ReactDOM.render(
+            <AppProvider>
+                <App />
+            </AppProvider>,
+            document.getElementById('root')
+        );
+    </script>
+</body>
+</html>

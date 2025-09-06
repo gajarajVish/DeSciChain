@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeSciChain - ML Models Marketplace</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles/darkMode.css">
+    <link rel="stylesheet" href="./styles/darkModeCommon.css">
+    <link rel="stylesheet" href="./styles/lightMode.css">
+    <link rel="stylesheet" href="./styles/lightModeCommon.css">
+    <link rel="stylesheet" href="./styles/app.css">
+    
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/aa7454d09f.js" crossorigin="anonymous"></script>
+    
+    <!-- React and Dependencies -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Algorand SDK -->
+    <script src="https://unpkg.com/algosdk@2.7.0/dist/browser/algosdk.min.js"></script>
+</head>
+<body>
+    <div id="root">
+        <h1>DeSciChain Loading...</h1>
+        <p>If you see this message, React is not loading.</p>
+    </div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Simple App
+        const App = () => {
+            const [wallet, setWallet] = useState({ connected: false, address: null, balance: 0 });
+            const [models, setModels] = useState([
+                {
+                    id: 1,
+                    name: "Neural Network for Image Classification",
+                    description: "CNN trained on ImageNet. 94% accuracy.",
+                    framework: "TensorFlow",
+                    price: "10 ALGO",
+                    priceAlgo: 10,
+                    accuracy: "94%",
+                    author: "Dr. Smith Labs"
+                },
+                {
+                    id: 2,
+                    name: "NLP Sentiment Analysis Model",
+                    description: "BERT-based model for sentiment analysis.",
+                    framework: "PyTorch",
+                    price: "15 ALGO", 
+                    priceAlgo: 15,
+                    accuracy: "97%",
+                    author: "AI Research Corp"
+                }
+            ]);
+
+            const connectWallet = () => {
+                alert('Demo wallet connection! Install Pera Wallet for real functionality.');
+                setWallet({
+                    connected: true,
+                    address: 'DEMO_ADDRESS_123',
+                    balance: 100.5
+                });
+            };
+
+            const disconnectWallet = () => {
+                setWallet({ connected: false, address: null, balance: 0 });
+            };
+
+            const purchaseModel = (model) => {
+                if (!wallet.connected) {
+                    alert('Please connect wallet first!');
+                    return;
+                }
+                alert(`Demo purchase of "${model.name}" for ${model.price}!`);
+            };
+
+            return (
+                <div>
+                    {/* Header */}
+                    <header style={{
+                        padding: '20px',
+                        backgroundColor: '#1a1a2e',
+                        color: 'white',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}>
+                        <div>
+                            <h1 style={{margin: '0'}}>DeSciChain</h1>
+                            <p style={{margin: '5px 0 0 0', opacity: '0.8'}}>ML Models Marketplace</p>
+                        </div>
+                        
+                        <div>
+                            {wallet.connected ? (
+                                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                                    <div>
+                                        <div>{wallet.address.slice(0, 8)}...</div>
+                                        <div style={{color: '#4caf50'}}>{wallet.balance} ALGO</div>
+                                    </div>
+                                    <button 
+                                        onClick={disconnectWallet}
+                                        style={{
+                                            backgroundColor: '#f44336',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '10px 16px',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Disconnect
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={connectWallet}
+                                    style={{
+                                        backgroundColor: '#4caf50',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '12px 20px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '16px'
+                                    }}
+                                >
+                                    Connect Wallet
+                                </button>
+                            )}
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <div style={{padding: '20px', backgroundColor: '#f5f5f5', minHeight: '70vh'}}>
+                        <h2 style={{color: '#333', marginBottom: '30px'}}>ML Models Marketplace</h2>
+                        
+                        <div style={{display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))'}}>
+                            {models.map(model => (
+                                <div key={model.id} style={{
+                                    border: '1px solid #ddd',
+                                    padding: '20px',
+                                    borderRadius: '8px',
+                                    backgroundColor: 'white',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                }}>
+                                    <h3 style={{color: '#1a1a2e', marginBottom: '10px'}}>{model.name}</h3>
+                                    <p style={{color: '#555', marginBottom: '15px'}}>{model.description}</p>
+                                    
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '15px'}}>
+                                        <span style={{fontSize: '14px'}}>Framework: <strong>{model.framework}</strong></span>
+                                        <span style={{fontSize: '14px'}}>Accuracy: <strong style={{color: '#4caf50'}}>{model.accuracy}</strong></span>
+                                    </div>
+                                    
+                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                                        <span style={{fontSize: '14px'}}>by {model.author}</span>
+                                        <span style={{fontSize: '18px', fontWeight: 'bold', color: '#1a1a2e'}}>{model.price}</span>
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => purchaseModel(model)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            backgroundColor: wallet.connected ? '#4caf50' : '#ccc',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: wallet.connected ? 'pointer' : 'not-allowed',
+                                            fontSize: '16px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        {wallet.connected ? 'Purchase Model' : 'Connect Wallet First'}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the app
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

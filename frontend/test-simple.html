@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeSciChain - Test</title>
+</head>
+<body>
+    <div id="root">
+        <h1>Loading...</h1>
+    </div>
+    
+    <!-- React and Dependencies -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script type="text/babel">
+        console.log('Simple test starting...');
+        console.log('React:', typeof React);
+        console.log('ReactDOM:', typeof ReactDOM);
+        
+        const App = () => {
+            return (
+                <div style={{padding: '20px', fontFamily: 'Arial'}}>
+                    <h1>✅ React is Working!</h1>
+                    <p>This is a simple React test.</p>
+                </div>
+            );
+        };
+        
+        console.log('About to render...');
+        ReactDOM.render(<App />, document.getElementById('root'));
+        console.log('Render called');
+    </script>
+</body>
+</html>

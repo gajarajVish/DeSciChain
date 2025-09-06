@@ -1,0 +1,4 @@
+pyteal==0.20.1
+algosdk==2.7.0
+pytest==7.4.0
+pytest-asyncio==0.21.0

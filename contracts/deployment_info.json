@@ -1,0 +1,15 @@
+{
+  "network": "testnet",
+  "creator_address": "UZCPSQ7OFDEGTRCMTP2V2G7MKFMZMZ5PUAQS2BSGRLAUQNS337GZC7TYMU",
+  "contracts": {
+    "model_registry": {
+      "app_id": 745475657,
+      "tx_id": "L4HGDNWTQR6WMI43S4UJ5CPZDP4HJ73N4YXJN42KG5DLDGJF4Q4A"
+    },
+    "escrow": {
+      "app_id": 745475660,
+      "tx_id": "FUU4WY3WCYLN7Q25FD7ARUQFNAXHNPRNFZS5IQKS3RLWA2OUK7ZA"
+    }
+  },
+  "deployment_timestamp": "unknown"
+}
