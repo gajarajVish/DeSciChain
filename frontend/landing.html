@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeSciFi - Decentralized ML Models Marketplace</title>
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 226, 0.15) 0%, transparent 50%),
+                linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Enhanced animated background */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite;
+            backdrop-filter: blur(1px);
+        }
+
+        .particle:nth-child(1) { width: 120px; height: 120px; left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 40px; height: 40px; left: 20%; animation-delay: 2s; }
+        .particle:nth-child(3) { width: 80px; height: 80px; left: 25%; animation-delay: 4s; }
+        .particle:nth-child(4) { width: 160px; height: 160px; left: 40%; animation-delay: 0s; }
+        .particle:nth-child(5) { width: 20px; height: 20px; left: 70%; animation-delay: 3s; }
+        .particle:nth-child(6) { width: 100px; height: 100px; left: 80%; animation-delay: 5s; }
+        .particle:nth-child(7) { width: 60px; height: 60px; left: 90%; animation-delay: 1s; }
+
+        /* Mesh gradient overlay */
+        .mesh-gradient {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(79, 172, 254, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+            z-index: 2;
+        }
+
+        @keyframes float {
+            0%, 100% { 
+                transform: translateY(0px) rotate(0deg) scale(1); 
+                opacity: 0.3;
+            }
+            33% { 
+                transform: translateY(-40px) rotate(120deg) scale(1.1); 
+                opacity: 0.6;
+            }
+            66% { 
+                transform: translateY(40px) rotate(240deg) scale(0.9); 
+                opacity: 0.4;
+            }
+        }
+
+        .landing-container {
+            text-align: center;
+            z-index: 10;
+            position: relative;
+            max-width: 1000px;
+            padding: 2rem;
+        }
+
+        .logo-container {
+            margin-bottom: 4rem;
+            animation: fadeInUp 1.2s ease-out;
+        }
+
+        /* Enhanced glassy logo */
+        .logo {
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 2.5rem;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 25px 80px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+            animation: pulse 3s ease-in-out infinite alternate;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.6),
+                transparent
+            );
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.6),
+                transparent,
+                rgba(255, 255, 255, 0.3)
+            );
+        }
+
+        .logo img {
+            width: 120px;
+            height: 120px;
+            filter: drop-shadow(0 4px 12px rgba(127, 255, 212, 0.4));
+            z-index: 1;
+            animation: alienPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes alienPulse {
+            from {
+                filter: drop-shadow(0 4px 12px rgba(127, 255, 212, 0.4));
+            }
+            to {
+                filter: drop-shadow(0 6px 20px rgba(127, 255, 212, 0.8));
+            }
+        }
+
+        .title {
+            font-size: 5.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.8) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 4px 20px rgba(255, 255, 255, 0.1));
+            animation: fadeInUp 1.2s ease-out 0.3s both;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            font-weight: 300;
+            margin-bottom: 4rem;
+            opacity: 0.85;
+            line-height: 1.7;
+            animation: fadeInUp 1.2s ease-out 0.6s both;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+            animation: fadeInUp 1.2s ease-out 0.9s both;
+        }
+
+        /* Enhanced glassy feature cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 
+                0 12px 40px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            padding: 2.5rem 2rem;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.8),
+                transparent
+            );
+        }
+
+        .glass-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.8),
+                transparent,
+                rgba(255, 255, 255, 0.3)
+            );
+        }
+
+        .glass-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .glass-card i {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 2px 8px rgba(79, 172, 254, 0.3));
+        }
+
+        .glass-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        .glass-card p {
+            font-size: 1rem;
+            opacity: 0.75;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Enhanced glassy CTA button */
+        .cta-button {
+            display: inline-block;
+            padding: 1.5rem 4rem;
+            background: rgba(79, 172, 254, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: white;
+            text-decoration: none;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1.3rem;
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 
+                0 15px 40px rgba(79, 172, 254, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            animation: fadeInUp 1.2s ease-out 1.2s both;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.6),
+                transparent
+            );
+        }
+
+        .cta-button:hover {
+            transform: translateY(-4px);
+            box-shadow: 
+                0 25px 60px rgba(79, 172, 254, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            background: rgba(79, 172, 254, 0.25);
+            border: 1px solid rgba(79, 172, 254, 0.5);
+            text-decoration: none;
+            color: white;
+        }
+
+        .cta-button i {
+            margin-left: 0.7rem;
+            transition: transform 0.3s ease;
+        }
+
+        .cta-button:hover i {
+            transform: translateX(4px);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            from {
+                box-shadow: 
+                    0 25px 80px rgba(0, 0, 0, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+            }
+            to {
+                box-shadow: 
+                    0 35px 100px rgba(79, 172, 254, 0.2),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                    inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .title {
+                font-size: 4rem;
+            }
+            
+            .subtitle {
+                font-size: 1.2rem;
+                margin-bottom: 3rem;
+            }
+            
+            .logo {
+                width: 180px;
+                height: 180px;
+            }
+            
+            .logo i {
+                font-size: 5rem;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                margin-bottom: 3rem;
+            }
+            
+            .glass-card {
+                padding: 2rem 1.5rem;
+            }
+            
+            .cta-button {
+                padding: 1.2rem 3rem;
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .title {
+                font-size: 3rem;
+            }
+            
+            .landing-container {
+                padding: 1rem;
+            }
+            
+            .logo {
+                width: 150px;
+                height: 150px;
+            }
+            
+            .logo i {
+                font-size: 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background particles -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+    
+    <!-- Mesh gradient overlay -->
+    <div class="mesh-gradient"></div>
+
+    <div class="landing-container">
+        <div class="logo-container">
+            <div class="logo">
+                <img src="./img/alien-logo.svg" alt="DeSciFi Alien Logo" />
+            </div>
+            <h1 class="title">DeSciFi</h1>
+            <p class="subtitle">Decentralized Machine Learning Models Marketplace<br>Built on Algorand Blockchain</p>
+        </div>
+
+        <div class="features">
+            <div class="glass-card">
+                <i class="fas fa-shield-alt"></i>
+                <h3>Secure Trading</h3>
+                <p>End-to-end encrypted model trading with blockchain verification and smart contract escrow</p>
+            </div>
+            <div class="glass-card">
+                <i class="fas fa-coins"></i>
+                <h3>ALGO Payments</h3>
+                <p>Fast, low-cost transactions powered by Algorand's sustainable blockchain technology</p>
+            </div>
+            <div class="glass-card">
+                <i class="fas fa-cloud"></i>
+                <h3>IPFS Storage</h3>
+                <p>Decentralized file storage ensuring your models are always accessible and censorship-resistant</p>
+            </div>
+            <div class="glass-card">
+                <i class="fas fa-lock"></i>
+                <h3>IP Protection</h3>
+                <p>Advanced watermarking and encryption to protect your intellectual property and prevent unauthorized use</p>
+            </div>
+        </div>
+
+        <a href="./marketplace.html" class="cta-button">
+            Enter Marketplace
+            <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+
+    <script>
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add mouse move effect for particles
+            document.addEventListener('mousemove', function(e) {
+                const particles = document.querySelectorAll('.particle');
+                const x = e.clientX / window.innerWidth;
+                const y = e.clientY / window.innerHeight;
+                
+                particles.forEach((particle, index) => {
+                    const speed = (index + 1) * 0.5;
+                    const xMove = (x - 0.5) * speed * 20;
+                    const yMove = (y - 0.5) * speed * 20;
+                    
+                    particle.style.transform = `translate(${xMove}px, ${yMove}px)`;
+                });
+            });
+
+            // Add click effect to logo
+            const logo = document.querySelector('.logo');
+            logo.addEventListener('click', function() {
+                this.style.animation = 'none';
+                setTimeout(() => {
+                    this.style.animation = 'pulse 2s ease-in-out infinite alternate';
+                }, 100);
+            });
+        });
+    </script>
+</body>
+</html>

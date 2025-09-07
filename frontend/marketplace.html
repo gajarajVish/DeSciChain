@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeSciFi - ML Models Marketplace</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles/app.css">
+    
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/aa7454d09f.js" crossorigin="anonymous"></script>
+    
+    <!-- Algorand SDK -->
+    <script src="https://unpkg.com/algosdk@2.7.0/dist/browser/algosdk.min.js"></script>
+    
+    <!-- Pera Wallet -->
+    <script src="https://unpkg.com/@perawallet/connect@1.4.2/dist/index.min.js"></script>
+    
+    <!-- Defly Wallet -->
+    <script src="https://unpkg.com/@blockshake/defly-connect@1.1.6/dist/index.min.js"></script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <!-- Alien Mascot next to logo -->
+                    <div class="logo-with-mascot">
+                        <div class="alien-mascot-inline" title="DeSciFi AI Assistant">
+                            <div style="
+                                width: 40px; 
+                                height: 40px; 
+                                background: radial-gradient(circle, #22c55e 30%, #16a34a 70%);
+                                border-radius: 50%;
+                                position: relative;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <!-- Alien face -->
+                                <div style="
+                                    width: 32px;
+                                    height: 32px;
+                                    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+                                    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+                                    position: relative;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">
+                                    <!-- Eyes -->
+                                    <div style="
+                                        position: absolute;
+                                        top: 6px;
+                                        left: 50%;
+                                        transform: translateX(-50%);
+                                        display: flex;
+                                        gap: 6px;
+                                    ">
+                                        <div style="
+                                            width: 6px;
+                                            height: 8px;
+                                            background: #000;
+                                            border-radius: 50%;
+                                            opacity: 0.8;
+                                        "></div>
+                                        <div style="
+                                            width: 6px;
+                                            height: 8px;
+                                            background: #000;
+                                            border-radius: 50%;
+                                            opacity: 0.8;
+                                        "></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="logo-text">
+                            <h1>DeSciFi</h1>
+                            <span class="tagline">ML Models Marketplace</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <nav class="nav">
+                    <a href="#marketplace" class="nav-link active" data-tab="marketplace">Marketplace</a>
+                    <a href="#publish" class="nav-link" data-tab="publish">Publish</a>
+                    <a href="#my-models" class="nav-link" data-tab="my-models">My Models</a>
+                </nav>
+                
+                <div class="header-actions">
+                    <button id="theme-toggle" class="btn btn-icon" title="Toggle Theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <div class="header-wallet-section">
+                        <!-- Wallet connection UI will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Error Message Container -->
+            <div id="error-message" class="error-container" style="display: none;"></div>
+            
+            <!-- Loading Spinner -->
+            <div id="loading-spinner" class="loading-spinner" style="display: none;">
+                <div class="spinner"></div>
+                <p>Processing...</p>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Marketplace Tab -->
+                <div id="marketplace-tab" class="tab-pane active">
+                    <div class="section-header">
+                        <h2>ML Models Marketplace</h2>
+                        <p>Discover and purchase cutting-edge machine learning models</p>
+                    </div>
+                    
+                    <div class="models-grid" id="models-container">
+                        <!-- Models will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Publish Tab -->
+                <div id="publish-tab" class="tab-pane">
+                    <div class="section-header">
+                        <h2>Publish Your Model</h2>
+                        <p>Share your machine learning model with the DeSciFi community</p>
+                    </div>
+                    
+                    <div class="publish-container">
+                        <form id="publish-model-form" class="publish-form">
+                            <div class="form-group">
+                                <label for="model-name">Model Name *</label>
+                                <input type="text" id="model-name" name="name" required placeholder="e.g., Advanced Image Classifier">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="model-description">Description *</label>
+                                <textarea id="model-description" name="description" required rows="4" placeholder="Describe your model's capabilities and use cases"></textarea>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="model-framework">Framework</label>
+                                    <select id="model-framework" name="framework">
+                                        <option value="tensorflow">TensorFlow</option>
+                                        <option value="pytorch">PyTorch</option>
+                                        <option value="scikit-learn">Scikit-Learn</option>
+                                        <option value="keras">Keras</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="model-type">Model Type</label>
+                                    <select id="model-type" name="type">
+                                        <option value="classification">Classification</option>
+                                        <option value="regression">Regression</option>
+                                        <option value="nlp">NLP</option>
+                                        <option value="computer-vision">Computer Vision</option>
+                                        <option value="reinforcement-learning">Reinforcement Learning</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="model-price">Price (ALGO) *</label>
+                                <input type="number" id="model-price" name="price" step="0.001" min="0" required placeholder="0.000">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="model-file">Model File *</label>
+                                <input type="file" id="model-file" name="modelFile" accept=".zip,.tar,.tar.gz,.pkl,.h5,.pt,.pth" required>
+                                <small class="form-help">Supported formats: ZIP, TAR, PKL, H5, PT, PTH (Max 100MB)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="license-terms">License Terms *</label>
+                                <select id="license-terms" name="licenseTerms">
+                                    <option value="MIT">MIT License</option>
+                                    <option value="Apache-2.0">Apache 2.0</option>
+                                    <option value="GPL-3.0">GPL 3.0</option>
+                                    <option value="BSD-3-Clause">BSD 3-Clause</option>
+                                    <option value="Custom">Custom License</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="model-tags">Tags</label>
+                                <input type="text" id="model-tags" name="tags" placeholder="e.g., image-recognition, deep-learning, computer-vision">
+                                <small class="form-help">Comma-separated tags to help users find your model</small>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary btn-large">
+                                    <i class="fas fa-upload"></i>
+                                    Publish Model
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- My Models Tab -->
+                <div id="my-models-tab" class="tab-pane">
+                    <div class="section-header">
+                        <h2>My Models</h2>
+                        <p>Manage your published and purchased models</p>
+                    </div>
+                    
+                    <div class="my-models-container">
+                        <div class="models-sections">
+                            <div class="models-section">
+                                <h3>Published Models</h3>
+                                <div id="published-models" class="models-grid">
+                                    <!-- Published models will be rendered here -->
+                                </div>
+                            </div>
+                            
+                            <div class="models-section">
+                                <h3>Purchased Models</h3>
+                                <div id="purchased-models" class="models-grid">
+                                    <!-- Purchased models will be rendered here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>DeSciFi</h4>
+                    <p>Decentralized marketplace for machine learning models on Algorand blockchain.</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Features</h4>
+                    <ul>
+                        <li>Secure Model Trading</li>
+                        <li>Blockchain Verification</li>
+                        <li>IPFS Storage</li>
+                        <li>Encrypted Models</li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#docs">Documentation</a></li>
+                        <li><a href="#api">API Reference</a></li>
+                        <li><a href="#community">Community</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 DeSciFi. Built on Algorand blockchain.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- App Scripts -->
+    <script src="./js/services/api.js"></script>
+    <script src="./js/services/blockchain.js"></script>
+    <script src="./js/utils/helpers.js"></script>
+    <script src="./js/app.js"></script>
+    
+    <!-- Tab Navigation Script -->
+    <script>
+        // Simple tab navigation
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabLinks = document.querySelectorAll('[data-tab]');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            
+            tabLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    const tabId = link.getAttribute('data-tab');
+                    
+                    // Update active tab link
+                    tabLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    
+                    // Update active tab pane
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+                    const targetPane = document.getElementById(`${tabId}-tab`);
+                    if (targetPane) {
+                        targetPane.classList.add('active');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
