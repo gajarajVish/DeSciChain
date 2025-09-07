@@ -8,14 +8,17 @@
 }
 
 :root {
-    /* Modern Color Palette */
-    --primary: #2563eb;
-    --primary-dark: #1d4ed8;
-    --primary-light: #60a5fa;
-    --secondary: #10b981;
+    /* Sleek Modern Color Palette */
+    --primary: #3b82f6;
+    --primary-dark: #1e40af;
+    --primary-light: #93c5fd;
+    --secondary: #06d6a0;
     --secondary-dark: #059669;
     --accent: #8b5cf6;
     --accent-dark: #7c3aed;
+    --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    --gradient-secondary: linear-gradient(135deg, #06d6a0 0%, #059669 100%);
+    --gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     
     /* Neutral Colors */
     --background: #ffffff;
@@ -97,11 +100,19 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Layout */
+/* Layout - Enhanced for better model card visibility */
 .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 0 var(--space-4);
+    padding: 0 var(--space-6);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Marketplace specific container */
+#marketplace-tab .container {
+    max-width: 1600px;
+    padding: 0 var(--space-8);
 }
 
 /* Header */
@@ -316,28 +327,44 @@ body {
     margin: 0 auto;
 }
 
-/* Models Grid */
+/* Models Grid - Fixed for better visibility */
 .models-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: var(--space-6);
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: var(--space-8);
     margin-bottom: var(--space-8);
+    padding: var(--space-4);
+    /* Ensure full visibility of all cards */
+    overflow: visible;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* Model Card */
+/* Model Card - Enhanced with sleek styling */
 .model-card {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 2px solid var(--border);
     border-radius: var(--radius-xl);
-    padding: var(--space-6);
-    transition: all 0.3s ease;
-    height: fit-content;
+    padding: var(--space-8);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    height: auto;
+    min-height: 420px;
+    max-height: none;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    position: relative;
+    /* Sleek gradient border effect */
+    background-clip: padding-box;
+    box-shadow: var(--shadow-md);
 }
 
 .model-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-xl);
-    border-color: var(--primary-light);
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--primary-light);
+    border-color: var(--primary);
+    /* Sleek glow effect */
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(59, 130, 246, 0.05) 100%);
 }
 
 .model-header {
@@ -355,11 +382,23 @@ body {
 }
 
 .model-title {
-    font-size: var(--font-size-xl);
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 var(--space-1) 0;
-    line-height: 1.4;
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 var(--space-3) 0;
+    line-height: 1.3;
+    letter-spacing: -0.025em;
+    /* Fallback for browsers that don't support background-clip */
+    color: var(--primary);
+    text-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+    /* Ensure full visibility */
+    overflow: visible;
+    white-space: normal;
+    word-wrap: break-word;
+    hyphens: auto;
 }
 
 .model-author {
@@ -789,15 +828,24 @@ textarea {
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-3);
-    border: 1px solid var(--border);
+    border: 2px solid var(--border);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s ease;
+    background: var(--surface);
+    color: var(--text-primary) !important;
 }
 
 .wallet-option:hover {
     background-color: var(--surface-hover);
     border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.wallet-option span {
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
 }
 
 .wallet-status {
@@ -806,9 +854,11 @@ textarea {
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 2px solid var(--success);
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
 }
 
 .status-indicator {
@@ -816,6 +866,153 @@ textarea {
     height: 8px;
     background: var(--success);
     border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+/* Wallet modal styles */
+.wallet-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.wallet-modal {
+    background: var(--background);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: var(--shadow-xl);
+}
+
+.wallet-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.wallet-modal-header h3 {
+    color: var(--text-primary) !important;
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
+
+.wallet-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+}
+
+.wallet-modal-close:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover);
+}
+
+.wallet-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.wallet-option {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--surface);
+}
+
+.wallet-option:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.wallet-option img {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+}
+
+.wallet-option span {
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+    font-size: 1rem !important;
+}
+
+/* Connected wallet display */
+.wallet-connected {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface);
+    border: 2px solid var(--success);
+    border-radius: var(--radius-md);
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+}
+
+.wallet-connected .wallet-address {
+    color: var(--text-primary) !important;
+    font-family: monospace;
+    font-size: 0.9rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wallet-connected .disconnect-btn {
+    background: var(--error);
+    color: white !important;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.wallet-connected .disconnect-btn:hover {
+    background: #dc2626;
+    transform: scale(1.05);
 }
 
 /* Utility Classes */
@@ -1022,5 +1219,681 @@ textarea {
 
 .modal-footer .btn {
     min-width: 120px;
+}
+
+/* IMPORTANT: Ensure all text is visible and readable */
+/* Model titles should be fully visible - allow wrapping for long titles */
+.published-models-grid .model-name,
+.purchased-models-grid .model-name,
+.models-grid .model-name,
+.card-title,
+.model-card .model-name,
+.model-card h3,
+.user-models-container h3,
+.model-title {
+    overflow: visible !important;
+    text-overflow: unset !important;
+    white-space: normal !important;
+    max-width: 100% !important;
+    display: block !important;
+    word-wrap: break-word !important;
+    hyphens: auto !important;
+    line-height: 1.4 !important;
+    margin-bottom: 0.5rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+}
+
+/* Publisher/Author info - Keep addresses readable but compact */
+.model-publisher,
+.model-author,
+.publisher-info,
+.author-address,
+.wallet-address,
+.address-display {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 180px !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    color: var(--text-muted) !important;
+    font-size: 0.9rem !important;
+    background: var(--surface-hover) !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* IMPORTANT: Never truncate pricing and status information */
+.model-price,
+.price-amount,
+.price-label,
+.model-status,
+.status-badge,
+.algo-price,
+.price-display,
+.cost-display,
+.pricing-info,
+.model-cost {
+    overflow: visible !important;
+    text-overflow: unset !important;
+    white-space: normal !important;
+    max-width: none !important;
+    display: block !important;
+    font-weight: bold !important;
+    font-size: 1.1em !important;
+}
+
+/* Model card content - Allow more description to be visible */
+.model-card .model-description,
+.card-description {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    max-height: 4.5em !important;
+    line-height: 1.5 !important;
+    color: var(--text-secondary) !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 1rem !important;
+}
+
+/* General card improvements */
+.model-card {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    word-wrap: break-word !important;
+    box-sizing: border-box !important;
+}
+
+.model-card * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Specific fixes for model grids */
+.user-models-container,
+.published-models-grid,
+.purchased-models-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+    gap: 1rem !important;
+    margin-top: 1rem !important;
+}
+
+/* Long text in any card should be truncated */
+.card .monospace,
+.model-card .monospace,
+.card code,
+.model-card code {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 100% !important;
+    display: inline-block !important;
+}
+
+/* Enhanced Model Card Spacing and Layout */
+.model-card {
+    padding: 1.5rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.3s ease !important;
+    min-height: 250px !important;
+    max-height: 450px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+}
+
+/* Create distinct sections in model cards */
+.model-card .card-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    margin-bottom: 1rem !important;
+}
+
+.model-card .card-body {
+    flex-grow: 1 !important;
+    margin-bottom: 1rem !important;
+}
+
+.model-card .card-footer {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding-top: 1rem !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin-top: auto !important;
+}
+
+.model-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Card content spacing */
+.model-card > * {
+    margin-bottom: 0.75rem !important;
+}
+
+.model-card > *:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Button improvements */
+.model-card .btn {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100px !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+/* Ensure pricing is always visible and prominent - Sleek styling */
+.model-card .pricing-section,
+.model-card .price-info,
+.model-card .algo-amount,
+.model-card .price-value,
+.model-price {
+    background: var(--gradient-secondary) !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: 12px !important;
+    border: 2px solid var(--secondary) !important;
+    font-weight: 700 !important;
+    font-size: 1.3rem !important;
+    color: white !important;
+    text-align: center !important;
+    min-width: 120px !important;
+    white-space: nowrap !important;
+    box-shadow: 0 4px 12px rgba(6, 214, 160, 0.3), var(--shadow-md) !important;
+    margin: 0.75rem 0 !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.model-card .pricing-section::before,
+.model-card .price-info::before,
+.model-card .algo-amount::before,
+.model-card .price-value::before,
+.model-price::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.model-card:hover .pricing-section::before,
+.model-card:hover .price-info::before,
+.model-card:hover .algo-amount::before,
+.model-card:hover .price-value::before,
+.model-card:hover .model-price::before {
+    left: 100%;
+}
+
+/* Status badges should be visible */
+.model-card .status-info,
+.model-card .status-display,
+.model-card .published-status {
+    background: #10b981 !important;
+    color: white !important;
+    padding: 0.25rem 0.75rem !important;
+    border-radius: 20px !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+}
+
+/* Make sure buttons don't get too cramped */
+.model-card .btn {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    max-width: none !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.875rem !important;
+    margin: 0.25rem !important;
+}
+
+/* Responsive improvements - Enhanced for marketplace */
+@media (max-width: 1200px) {
+    .models-grid {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)) !important;
+        gap: var(--space-6) !important;
+    }
+    
+    #marketplace-tab .container {
+        max-width: 1200px !important;
+        padding: 0 var(--space-6) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .user-models-container,
+    .published-models-grid,
+    .purchased-models-grid,
+    .models-grid {
+        grid-template-columns: 1fr !important;
+        gap: var(--space-4) !important;
+        padding: var(--space-2) !important;
+    }
+    
+    .container {
+        padding: 0 var(--space-3) !important;
+    }
+    
+    #marketplace-tab .container {
+        padding: 0 var(--space-4) !important;
+        max-width: 100% !important;
+    }
+    
+    .model-card {
+        min-height: 380px !important;
+        padding: var(--space-6) !important;
+        margin: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .model-title {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    .model-publisher,
+    .model-author,
+    .publisher-info,
+    .author-address,
+    .wallet-address,
+    .address-display {
+        max-width: 200px !important;
+    }
+    
+    .model-card .pricing-section,
+    .model-card .price-info,
+    .model-card .algo-amount {
+        font-size: 1.1rem !important;
+        min-width: 100px !important;
+        padding: 0.5rem 0.75rem !important;
+    }
+    
+    .model-card .btn {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.8rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .models-grid {
+        padding: var(--space-1) !important;
+        gap: var(--space-3) !important;
+    }
+    
+    .model-card {
+        min-height: 350px !important;
+        padding: var(--space-4) !important;
+    }
+    
+    .model-title {
+        font-size: var(--font-size-lg) !important;
+    }
+}
+
+/* CRITICAL: Text Visibility and Contrast Fixes */
+/* Ensure all text has sufficient contrast in both themes */
+
+/* Force proper text colors for all elements */
+.model-card *,
+.tab-content *,
+.section-header *,
+.main * {
+    color: inherit !important;
+}
+
+/* Model card text hierarchy - Enhanced sleek styling */
+.model-card {
+    color: var(--text-primary) !important;
+    background: var(--surface) !important;
+    border: 2px solid var(--border) !important;
+    /* Sleek gradient background */
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(248, 250, 252, 0.8) 100%) !important;
+    /* Ensure full visibility */
+    overflow: visible !important;
+    contain: none !important;
+}
+
+[data-theme="dark"] .model-card {
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(30, 41, 59, 0.8) 100%) !important;
+}
+
+.model-card .model-title,
+.model-card h3,
+.model-card .card-title {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    font-size: 1.2rem !important;
+    margin-bottom: 0.5rem !important;
+    line-height: 1.3 !important;
+}
+
+.model-card .model-description,
+.model-card .card-description,
+.model-card p {
+    color: var(--text-secondary) !important;
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
+}
+
+.model-card .model-author,
+.model-card .model-publisher {
+    color: var(--text-muted) !important;
+    font-size: 0.85rem !important;
+}
+
+/* Status and metadata styling */
+.model-card .model-status,
+.model-card .status-badge,
+.model-card .tag {
+    background: var(--primary) !important;
+    color: white !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 12px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+}
+
+.model-card .encrypted-tag,
+.model-card .security-badge {
+    background: var(--success) !important;
+    color: white !important;
+}
+
+/* Button visibility - Enhanced sleek styling */
+.model-card .btn {
+    background: var(--gradient-primary) !important;
+    color: white !important;
+    border: 2px solid var(--primary) !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 10px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    font-size: 0.9rem !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.model-card .btn:hover {
+    background: var(--gradient-primary) !important;
+    border-color: var(--primary-light) !important;
+    transform: translateY(-3px) scale(1.05) !important;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4) !important;
+}
+
+.model-card .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.model-card .btn:hover::before {
+    left: 100%;
+}
+
+.model-card .btn-secondary {
+    background: var(--secondary) !important;
+    border-color: var(--secondary) !important;
+}
+
+.model-card .btn-secondary:hover {
+    background: var(--secondary-dark) !important;
+    border-color: var(--secondary-dark) !important;
+}
+
+/* Section headers - Enhanced sleek styling */
+.section-header h2 {
+    background: var(--gradient-primary) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    color: var(--primary) !important;
+    font-weight: 800 !important;
+    font-size: var(--font-size-4xl) !important;
+    margin-bottom: 1.5rem !important;
+    text-align: center !important;
+    letter-spacing: -0.025em !important;
+    text-shadow: 0 4px 8px rgba(59, 130, 246, 0.1) !important;
+}
+
+.section-header p {
+    color: var(--text-secondary) !important;
+    font-size: 1.2rem !important;
+    text-align: center !important;
+    max-width: 700px !important;
+    margin: 0 auto 2rem auto !important;
+    line-height: 1.6 !important;
+}
+
+/* Form elements */
+.publish-form label {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.publish-form input,
+.publish-form textarea,
+.publish-form select {
+    color: var(--text-primary) !important;
+    background: var(--background) !important;
+    border: 2px solid var(--border) !important;
+}
+
+.publish-form input:focus,
+.publish-form textarea:focus,
+.publish-form select:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* Navigation */
+.nav-link {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+}
+
+.nav-link:hover {
+    color: var(--text-primary) !important;
+}
+
+.nav-link.active {
+    color: var(--primary) !important;
+    font-weight: 600 !important;
+}
+
+/* Dark theme specific fixes */
+[data-theme="dark"] .model-card {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .model-card .model-title,
+[data-theme="dark"] .model-card h3 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .model-card .model-description,
+[data-theme="dark"] .model-card p {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .model-card .model-author {
+    color: var(--text-muted) !important;
+}
+
+/* Loading and error states */
+.loading-spinner {
+    color: var(--text-primary) !important;
+}
+
+.error-container {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border: 2px solid var(--error) !important;
+    color: var(--error) !important;
+    padding: 1rem !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+}
+
+/* Toast notifications */
+.toast {
+    background: var(--surface) !important;
+    border: 2px solid var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+.toast.success {
+    border-color: var(--success) !important;
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: var(--success) !important;
+}
+
+.toast.error {
+    border-color: var(--error) !important;
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: var(--error) !important;
+}
+
+/* Ensure no text is invisible */
+* {
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Fix any potential invisible text issues */
+.model-card *:not(.btn):not(.tag):not(.badge) {
+    text-shadow: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Ensure minimum contrast ratios */
+.model-card {
+    min-height: 300px !important;
+    padding: 1.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+}
+
+.model-card > * {
+    margin-bottom: 0.75rem !important;
+}
+
+.model-card > *:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* FINAL OVERRIDE: Ensure absolutely no text is invisible */
+/* This is a safety net to catch any edge cases */
+.model-card h1,
+.model-card h2, 
+.model-card h3,
+.model-card h4,
+.model-card h5,
+.model-card h6,
+.model-card p,
+.model-card span,
+.model-card div,
+.model-card a,
+.model-card button,
+.model-card label {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    color: inherit !important;
+}
+
+.model-card button,
+.model-card .btn {
+    display: inline-flex !important;
+}
+
+.model-card span {
+    display: inline !important;
+}
+
+/* Ensure proper font loading */
+body {
+    font-display: swap !important;
+}
+
+/* Fix any potential WebKit rendering issues */
+.model-card *,
+.tab-content *,
+.section-header * {
+    -webkit-text-size-adjust: 100% !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Emergency visibility fix for any remaining invisible text */
+[style*="color: transparent"],
+[style*="opacity: 0"],
+[style*="visibility: hidden"] {
+    color: var(--text-primary) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Ensure minimum font sizes for readability */
+.model-card * {
+    font-size: max(0.8rem, 1em) !important;
+    line-height: max(1.2, normal) !important;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --text-primary: #000000;
+        --text-secondary: #333333;
+        --background: #ffffff;
+        --surface: #f8f9fa;
+        --border: #000000;
+    }
+    
+    [data-theme="dark"] {
+        --text-primary: #ffffff;
+        --text-secondary: #cccccc;
+        --background: #000000;
+        --surface: #1a1a1a;
+        --border: #ffffff;
+    }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
