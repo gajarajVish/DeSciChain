@@ -152,13 +152,50 @@ interface WalletConnectButtonProps {
 
 export const WalletConnectButton: React.FC<WalletConnectButtonProps> = ({ className = '' }) => {
   const { connected, address, balance, connect, disconnect, loading, error } = useWallet();
+  const [displayName, setDisplayName] = React.useState<string | null>(null);
+
+  // Fetch display name when wallet connects
+  React.useEffect(() => {
+    if (connected && address) {
+      fetchDisplayName(address);
+    }
+  }, [connected, address]);
+
+  const fetchDisplayName = async (walletAddress: string) => {
+    try {
+      // Try to get user's .desci name from recent models
+      const response = await fetch(`http://localhost:3001/api/models`);
+      const models = await response.json();
+      
+      // Find a model by this user to get their display name
+      const userModel = models.find((model: any) => 
+        model.creator === walletAddress || model.originalAuthor === walletAddress
+      );
+      
+      if (userModel && userModel.authorDisplayName && userModel.authorDisplayName.includes('.desci')) {
+        setDisplayName(userModel.authorDisplayName);
+      } else {
+        setDisplayName(null);
+      }
+    } catch (error) {
+      console.log('Could not fetch display name:', error);
+      setDisplayName(null);
+    }
+  };
+
+  const getWalletDisplayText = () => {
+    if (displayName) {
+      return displayName.length > 15 ? `${displayName.slice(0, 12)}...` : displayName;
+    }
+    return `${address?.slice(0, 6)}...${address?.slice(-4)}`;
+  };
 
   if (connected && address) {
     return (
       <div className={`wallet-connected ${className}`}>
         <div className="wallet-info">
-          <span className="wallet-address">
-            {address.slice(0, 6)}...{address.slice(-4)}
+          <span className="wallet-address" title={displayName || address}>
+            {getWalletDisplayText()}
           </span>
           <span className="wallet-balance">
             {balance.toFixed(2)} ALGO
