@@ -1,5 +1,5 @@
 /**
- * Integration Tests for DeSciChain
+ * Integration Tests for DeSciFi
  * Tests the complete publish -> purchase -> download flow
  */
 export {};

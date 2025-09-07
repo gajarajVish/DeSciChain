@@ -1,5 +1,5 @@
 /**
- * DeSciChain Backend Server
+ * DeSciFi Backend Server
  * Main entry point for the API server
  */
 declare const app: import("express-serve-static-core").Express;

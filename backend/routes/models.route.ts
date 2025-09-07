@@ -106,6 +106,72 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/models/purchases/:address
+ * Get all purchased models for a specific buyer address
+ */
+router.get('/purchases/:address', async (req: Request, res: Response) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address || address.length !== 58) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid Algorand address required'
+      });
+    }
+
+    const purchasedModels = await databaseService.getPurchasedModelsByAddress(address);
+
+    res.json({
+      success: true,
+      data: purchasedModels,
+      total: purchasedModels.length
+    });
+  } catch (error) {
+    console.error('Failed to get purchased models:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve purchased models'
+    });
+  }
+});
+
+/**
+ * GET /api/models/user/:address
+ * Get all published models by a specific publisher address
+ */
+router.get('/user/:address', async (req: Request, res: Response) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address || address.length !== 58) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid Algorand address required'
+      });
+    }
+
+    const userModels = await databaseService.getModelsWithMetadata({
+      publisher: address,
+      limit: 100,
+      offset: 0
+    });
+
+    res.json({
+      success: true,
+      data: userModels,
+      total: userModels.length
+    });
+  } catch (error) {
+    console.error('Failed to get user models:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve user models'
+    });
+  }
+});
+
+/**
  * POST /api/models/prepare-publish
  * Step 1: Encrypt model and upload to IPFS, return unsigned transaction
  */

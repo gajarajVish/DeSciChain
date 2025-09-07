@@ -16,11 +16,14 @@ class APIService {
      */
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+        
+        // Don't set Content-Type for FormData, let browser handle it
+        const headers = options.body instanceof FormData 
+            ? { ...options.headers }  // Skip default headers for FormData
+            : { ...this.defaultHeaders, ...options.headers };
+        
         const config = {
-            headers: {
-                ...this.defaultHeaders,
-                ...options.headers
-            },
+            headers,
             ...options
         };
 
@@ -99,9 +102,12 @@ class APIService {
      * Prepare model for publishing
      */
     async prepareModelPublish(formData) {
+        console.log('🌐 API: Sending prepare-publish request with FormData');
+        console.log('🌐 API: FormData type:', formData.constructor.name);
+        
         return this.request('/models/prepare-publish', {
             method: 'POST',
-            body: JSON.stringify(formData)
+            body: formData
         });
     }
 

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Database Service for DeSciChain
+ * Database Service for DeSciFi
  * Handles all database operations with PostgreSQL
  */
 Object.defineProperty(exports, "__esModule", { value: true });

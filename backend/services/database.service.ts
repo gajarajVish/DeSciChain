@@ -603,6 +603,42 @@ export class DatabaseService {
   }
 
   /**
+   * Get purchased models by buyer address
+   */
+  async getPurchasedModelsByAddress(buyerAddress: string): Promise<any[]> {
+    const query = `
+      SELECT 
+        pm.id,
+        mm.name,
+        mm.description,
+        pm.publisher_address as "publisherAddress",
+        mm.framework,
+        mm.model_type as "type",
+        pm.price_algo as "price",
+        pm.license_terms as "licenseTerms",
+        mm.tags,
+        pm.file_size as "fileSize",
+        pm.model_cid as "cid",
+        pm.algorand_txn_id as "algorandTxnId",
+        pm.blockchain_model_id as "blockchainModelId",
+        pm.created_at as "publishedAt",
+        mp.id as "purchaseId",
+        mp.escrow_txn_id as "transactionId",
+        mp.created_at as "purchaseDate",
+        mp.status as "purchaseStatus"
+      FROM published_models pm
+      JOIN model_purchases mp ON pm.id = mp.model_id
+      JOIN model_metadata mm ON pm.id = mm.model_id
+      WHERE mp.buyer_wallet = $1
+      AND mp.status = 'completed'
+      ORDER BY mp.created_at DESC
+    `;
+
+    const result = await this.query(query, [buyerAddress]);
+    return result.rows;
+  }
+
+  /**
    * Close database connection pool
    */
   async close(): Promise<void> {

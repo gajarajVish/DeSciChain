@@ -1,5 +1,5 @@
 /**
- * Database Service for DeSciChain
+ * Database Service for DeSciFi
  * Handles all database operations with PostgreSQL
  */
 import { PoolClient } from 'pg';

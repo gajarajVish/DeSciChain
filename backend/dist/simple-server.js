@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Simple DeSciChain Backend Server
+ * Simple DeSciFi Backend Server
  * Minimal setup to get started
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -20,7 +20,7 @@ app.use(express_1.default.json());
 // Basic health check
 app.get('/', (req, res) => {
     res.json({
-        message: 'DeSciChain Backend API',
+        message: 'DeSciFi Backend API',
         version: '1.0.0',
         status: 'running',
         contracts: {
@@ -35,7 +35,7 @@ app.get('/api/health', (req, res) => {
 });
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 DeSciChain Backend running on port ${PORT}`);
+    console.log(`🚀 DeSciFi Backend running on port ${PORT}`);
     console.log(`📄 API docs available at http://localhost:${PORT}/`);
     console.log(`🔗 Model Registry Contract: ${process.env.MODEL_REGISTRY_APP_ID}`);
     console.log(`🔗 Escrow Contract: ${process.env.ESCROW_APP_ID}`);

@@ -1,5 +1,5 @@
 /**
- * Watermark Service for DeSciChain
+ * Watermark Service for DeSciFi
  * Handles watermarking of ML models for ownership verification
  */
 export interface WatermarkOptions {

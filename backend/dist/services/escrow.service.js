@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Escrow Service for DeSciChain
+ * Escrow Service for DeSciFi
  * Manages escrow state and payment processing
  */
 Object.defineProperty(exports, "__esModule", { value: true });

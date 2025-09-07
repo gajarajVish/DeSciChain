@@ -1,6 +1,6 @@
 "use strict";
 /**
- * IPFS Service for DeSciChain
+ * IPFS Service for DeSciFi
  * Handles file upload and download to IPFS
  */
 Object.defineProperty(exports, "__esModule", { value: true });

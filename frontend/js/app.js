@@ -445,8 +445,17 @@ class DeSciFiApp {
             console.log('📤 Starting secure model publication process...');
             
             // Check wallet connection
-            if (!this.state.wallet.connected) {
-                throw new Error('Please connect your wallet first to publish models');
+            if (!this.state.wallet.connected || !this.state.wallet.address) {
+                // Try to get address from blockchain service as backup
+                const connectedAccount = this.blockchainService.connectedAccount;
+                if (connectedAccount && connectedAccount.address) {
+                    // Update state if blockchain service has connection but state doesn't reflect it
+                    this.state.wallet.connected = true;
+                    this.state.wallet.address = connectedAccount.address;
+                    console.log('🔄 Fixed wallet connection state with address:', connectedAccount.address);
+                } else {
+                    throw new Error('Please connect your wallet first to publish models');
+                }
             }
             
             const form = event.target;
@@ -477,11 +486,32 @@ class DeSciFiApp {
             const prepareData = {
                 name: form.querySelector('[name="name"]').value,
                 description: form.querySelector('[name="description"]').value,
-                price: form.querySelector('[name="price"]').value
+                price: form.querySelector('[name="price"]').value,
+                publisherAddress: this.state.wallet.address || 'TESTDEMOWALLET123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ234567890',
+                licenseTerms: form.querySelector('[name="licenseTerms"]').value,
+                framework: form.querySelector('[name="framework"]').value,
+                type: form.querySelector('[name="type"]').value,
+                tags: form.querySelector('[name="tags"]').value
             };
             
             console.log('🔍 Validating model metadata...', prepareData);
-            const prepareResponse = await this.apiService.prepareModelPublish(prepareData);
+            
+            // Create FormData for prepare request (includes file for backend validation)
+            const prepareFormData = new FormData();
+            Object.keys(prepareData).forEach(key => {
+                prepareFormData.append(key, prepareData[key]);
+                console.log(`📝 Added to FormData: ${key} = ${prepareData[key]}`);
+            });
+            prepareFormData.append('modelFile', modelFile);
+            console.log('📎 Added file to FormData:', modelFile.name, modelFile.size, 'bytes');
+            
+            // Debug FormData contents
+            console.log('📦 FormData entries:');
+            for (let [key, value] of prepareFormData.entries()) {
+                console.log(`  ${key}:`, typeof value === 'object' ? `[File: ${value.name}]` : value);
+            }
+            
+            const prepareResponse = await this.apiService.prepareModelPublish(prepareFormData);
             
             if (!prepareResponse.success) {
                 throw new Error('Model validation failed: ' + prepareResponse.error);

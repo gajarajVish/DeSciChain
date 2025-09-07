@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Integration Tests for DeSciChain
+ * Integration Tests for DeSciFi
  * Tests the complete publish -> purchase -> download flow
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -14,7 +14,7 @@ const ipfs_service_1 = require("../services/ipfs.service");
 const encryption_service_1 = require("../services/encryption.service");
 const watermark_service_1 = require("../services/watermark.service");
 const escrow_service_1 = require("../services/escrow.service");
-describe('DeSciChain Integration Tests', () => {
+describe('DeSciFi Integration Tests', () => {
     let blockchainService;
     let ipfsService;
     let encryptionService;

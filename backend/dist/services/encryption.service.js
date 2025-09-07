@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Encryption Service for DeSciChain
+ * Encryption Service for DeSciFi
  * Handles AES-256 encryption/decryption for model files
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {

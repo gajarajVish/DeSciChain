@@ -1,5 +1,5 @@
 /**
- * Simple DeSciChain Backend Server
+ * Simple DeSciFi Backend Server
  * Minimal setup to get started
  */
 export {};

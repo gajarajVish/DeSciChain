@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Secure Models Routes for DeSciChain
+ * Secure Models Routes for DeSciFi
  * Implements wallet-first flows with no server-side private key handling
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {

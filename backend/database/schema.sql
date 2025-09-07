@@ -4,7 +4,7 @@
 -- Published Models Table
 CREATE TABLE IF NOT EXISTS published_models (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    lab_id VARCHAR(255) NOT NULL,
+    lab_id UUID NOT NULL,
     model_cid VARCHAR(255) NOT NULL UNIQUE,
     algorand_txn_id VARCHAR(255) NOT NULL,
     blockchain_model_id INTEGER NOT NULL,

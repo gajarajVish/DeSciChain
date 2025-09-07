@@ -1,5 +1,5 @@
 /**
- * Encryption Service for DeSciChain
+ * Encryption Service for DeSciFi
  * Handles AES-256 encryption/decryption for model files
  */
 export interface EncryptionOptions {

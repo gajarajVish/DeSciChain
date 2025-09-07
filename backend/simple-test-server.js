@@ -186,16 +186,31 @@ app.get('/api/models/:id', (req, res) => {
 });
 
 // Prepare model publishing (pre-validation)
-app.post('/api/models/prepare-publish', (req, res) => {
+app.post('/api/models/prepare-publish', upload.single('modelFile'), (req, res) => {
   console.log('🔍 POST /api/models/prepare-publish - Preparing model publication');
   console.log('Request body:', req.body);
+  console.log('Request body type:', typeof req.body);
+  console.log('Request body keys:', Object.keys(req.body || {}));
   
-  const { name, description, price } = req.body;
+  const { name, description, price, publisherAddress, licenseTerms, framework, type, tags } = req.body;
+  
+  console.log('Extracted fields:', { name, description, price, publisherAddress, licenseTerms, framework, type, tags });
+  console.log('Uploaded file:', req.file ? `${req.file.originalname} (${req.file.size} bytes)` : 'No file');
   
   // Basic validation
-  if (!name || !description || !price) {
+  if (!name || !description || !price || !publisherAddress || !licenseTerms) {
+    console.log('❌ Validation failed - missing required fields');
     return res.status(400).json({ 
-      error: 'Missing required fields: name, description, price' 
+      error: 'Validation failed',
+      details: `Missing required fields. Received: name=${name}, description=${description}, price=${price}, publisherAddress=${publisherAddress}, licenseTerms=${licenseTerms}`
+    });
+  }
+  
+  if (!req.file) {
+    console.log('❌ Validation failed - no file uploaded');
+    return res.status(400).json({ 
+      error: 'Validation failed',
+      details: 'Model file is required'
     });
   }
   
