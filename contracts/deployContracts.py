@@ -36,8 +36,8 @@ def get_creator_account():
 
 def compile_contract(approval_program, clear_program):
     """Compile PyTeal contracts to TEAL"""
-    approval_teal = compileTeal(approval_program(), Mode.Application, version=6)
-    clear_teal = compileTeal(clear_program(), Mode.Application, version=6)
+    approval_teal = compileTeal(approval_program(), Mode.Application, version=8)
+    clear_teal = compileTeal(clear_program(), Mode.Application, version=8)
     return approval_teal, clear_teal
 
 def deploy_contract(client, creator_address, creator_private_key, approval_teal, clear_teal, app_args=None):
@@ -57,7 +57,7 @@ def deploy_contract(client, creator_address, creator_private_key, approval_teal,
         on_complete=0,  # NoOp
         approval_program=base64.b64decode(approval_result['result']),
         clear_program=base64.b64decode(clear_result['result']),
-        global_schema=StateSchema(num_uints=10, num_byte_slices=10),
+        global_schema=StateSchema(num_uints=50, num_byte_slices=50),
         local_schema=StateSchema(num_uints=0, num_byte_slices=0),
         app_args=app_args or []
     )

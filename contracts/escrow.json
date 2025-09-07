@@ -1,0 +1,80 @@
+{
+  "name": "Escrow",
+  "description": "Smart contract for managing payment escrow in model purchases",
+  "methods": [
+    {
+      "name": "create_escrow",
+      "args": [
+        {
+          "type": "uint64",
+          "name": "model_id",
+          "desc": "Model ID being purchased"
+        },
+        {
+          "type": "address",
+          "name": "publisher",
+          "desc": "Publisher address"
+        },
+        {
+          "type": "uint64",
+          "name": "price",
+          "desc": "Price in microAlgos"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Escrow created with payment"
+      }
+    },
+    {
+      "name": "release_payment",
+      "args": [
+        {
+          "type": "uint64",
+          "name": "escrow_id",
+          "desc": "Escrow ID to release"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Payment released to publisher"
+      }
+    },
+    {
+      "name": "refund_payment",
+      "args": [
+        {
+          "type": "uint64",
+          "name": "escrow_id",
+          "desc": "Escrow ID to refund"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Payment refunded to buyer"
+      }
+    },
+    {
+      "name": "get_escrow_status",
+      "args": [
+        {
+          "type": "uint64",
+          "name": "escrow_id",
+          "desc": "Escrow ID to check"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Escrow details returned via logs"
+      }
+    },
+    {
+      "name": "get_escrow_count",
+      "args": [],
+      "returns": {
+        "type": "void",
+        "desc": "Total number of escrows returned via logs"
+      }
+    }
+  ]
+}

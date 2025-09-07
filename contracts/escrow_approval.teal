@@ -1,0 +1,516 @@
+#pragma version 8
+txn ApplicationID
+int 0
+==
+bnz main_l22
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "create_escrow"
+==
+&&
+bnz main_l21
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "release_payment"
+==
+&&
+bnz main_l20
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "refund_payment"
+==
+&&
+bnz main_l19
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "get_escrow_status"
+==
+&&
+bnz main_l18
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "get_escrow_count"
+==
+&&
+bnz main_l17
+txn OnCompletion
+int OptIn
+==
+bnz main_l16
+txn OnCompletion
+int CloseOut
+==
+bnz main_l15
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l14
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l13
+int 1
+bnz main_l12
+err
+main_l12:
+int 0
+return
+main_l13:
+int 0
+return
+main_l14:
+int 0
+return
+main_l15:
+int 1
+return
+main_l16:
+int 1
+return
+main_l17:
+byte "ESCROW_COUNT:"
+byte "escrow_count"
+app_global_get
+itob
+concat
+log
+int 1
+return
+main_l18:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 1
+btoi
+int 0
+>
+assert
+txna ApplicationArgs 1
+btoi
+byte "escrow_count"
+app_global_get
+<=
+assert
+byte "ESCROW_STATUS:"
+txna ApplicationArgs 1
+concat
+log
+byte "MODEL_ID:"
+byte 0x6d6f64656c5f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+itob
+concat
+log
+byte "BUYER:"
+byte 0x62757965725f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+log
+byte "PUBLISHER:"
+byte 0x7075626c69736865725f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+log
+byte "AMOUNT:"
+byte 0x616d6f756e745f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+itob
+concat
+log
+byte "STATUS:"
+byte 0x7374617475735f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+itob
+concat
+log
+byte "CREATED:"
+byte 0x637265617465645f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+log
+int 1
+return
+main_l19:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 1
+btoi
+int 0
+>
+assert
+txna ApplicationArgs 1
+btoi
+byte "escrow_count"
+app_global_get
+<=
+assert
+byte 0x7374617475735f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+int 0
+==
+assert
+byte 0x616d6f756e745f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+int 0
+>
+assert
+txn Sender
+byte 0x62757965725f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+==
+global LatestTimestamp
+byte 0x637265617465645f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+btoi
+int 604800
++
+>
+||
+assert
+byte 0x7374617475735f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+int 2
+app_global_put
+byte 0x726566756e6465645f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+global LatestTimestamp
+itob
+app_global_put
+itxn_begin
+int pay
+itxn_field TypeEnum
+byte 0x62757965725f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+itxn_field Receiver
+byte 0x616d6f756e745f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+int 1000
+-
+itxn_field Amount
+int 0
+itxn_field Fee
+itxn_submit
+byte "PAYMENT_REFUNDED:"
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+byte 0x62757965725f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+byte ":"
+concat
+byte 0x616d6f756e745f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+itob
+concat
+log
+int 1
+return
+main_l20:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 1
+btoi
+int 0
+>
+assert
+txna ApplicationArgs 1
+btoi
+byte "escrow_count"
+app_global_get
+<=
+assert
+byte 0x7374617475735f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+int 0
+==
+assert
+txn Sender
+byte 0x7075626c69736865725f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+==
+assert
+byte 0x616d6f756e745f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+int 0
+>
+assert
+byte 0x7374617475735f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+int 1
+app_global_put
+byte 0x72656c65617365645f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+global LatestTimestamp
+itob
+app_global_put
+itxn_begin
+int pay
+itxn_field TypeEnum
+byte 0x7075626c69736865725f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+itxn_field Receiver
+byte 0x616d6f756e745f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+int 1000
+-
+itxn_field Amount
+int 0
+itxn_field Fee
+itxn_submit
+byte "PAYMENT_RELEASED:"
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+byte 0x7075626c69736865725f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+byte ":"
+concat
+byte 0x616d6f756e745f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+itob
+concat
+log
+int 1
+return
+main_l21:
+txn NumAppArgs
+int 4
+==
+assert
+global GroupSize
+int 2
+==
+assert
+gtxn 0 TypeEnum
+int pay
+==
+assert
+gtxn 1 TypeEnum
+int appl
+==
+assert
+gtxn 0 Receiver
+global CurrentApplicationAddress
+==
+assert
+gtxn 0 Amount
+int 0
+>
+assert
+gtxn 0 Amount
+txna ApplicationArgs 3
+btoi
+==
+assert
+byte "escrow_count"
+byte "escrow_count"
+app_global_get
+int 1
++
+app_global_put
+byte 0x6d6f64656c5f
+byte "escrow_count"
+app_global_get
+itob
+concat
+txna ApplicationArgs 1
+btoi
+app_global_put
+byte 0x62757965725f
+byte "escrow_count"
+app_global_get
+itob
+concat
+gtxn 0 Sender
+app_global_put
+byte 0x7075626c69736865725f
+byte "escrow_count"
+app_global_get
+itob
+concat
+txna ApplicationArgs 2
+app_global_put
+byte 0x616d6f756e745f
+byte "escrow_count"
+app_global_get
+itob
+concat
+gtxn 0 Amount
+app_global_put
+byte 0x7374617475735f
+byte "escrow_count"
+app_global_get
+itob
+concat
+int 0
+app_global_put
+byte 0x637265617465645f
+byte "escrow_count"
+app_global_get
+itob
+concat
+global LatestTimestamp
+itob
+app_global_put
+byte "ESCROW_CREATED:"
+byte "escrow_count"
+app_global_get
+itob
+concat
+byte ":"
+concat
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+gtxn 0 Sender
+concat
+byte ":"
+concat
+gtxn 0 Amount
+itob
+concat
+log
+int 1
+return
+main_l22:
+byte "escrow_count"
+int 0
+app_global_put
+int 1
+return

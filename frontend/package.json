@@ -10,8 +10,11 @@
     "test": "echo 'No tests specified'"
   },
   "dependencies": {
+    "@algorandfoundation/algokit-utils": "^9.1.2",
+    "@txnlab/use-wallet": "^4.3.1",
     "@walletconnect/qrcode-modal": "^1.8.0",
     "@walletconnect/web3-provider": "^1.8.0",
+    "algosdk": "^3.4.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "http-proxy-middleware": "^2.0.6"

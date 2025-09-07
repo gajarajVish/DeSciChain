@@ -165,6 +165,28 @@ app.get('/api/models/:id', (req, res) => {
   res.json(model);
 });
 
+// Prepare model publishing (pre-validation)
+app.post('/api/models/prepare-publish', (req, res) => {
+  console.log('🔍 POST /api/models/prepare-publish - Preparing model publication');
+  console.log('Request body:', req.body);
+  
+  const { name, description, price } = req.body;
+  
+  // Basic validation
+  if (!name || !description || !price) {
+    return res.status(400).json({ 
+      error: 'Missing required fields: name, description, price' 
+    });
+  }
+  
+  // Return preparation success
+  res.json({
+    success: true,
+    message: 'Model preparation validated successfully',
+    uploadEndpoint: '/api/models/publish'
+  });
+});
+
 // Publish model with file upload and encryption
 app.post('/api/models/publish', upload.single('file'), async (req, res) => {
   try {
@@ -188,29 +210,31 @@ app.post('/api/models/publish', upload.single('file'), async (req, res) => {
     let encryptedHash = null;
     let finalFilePath = req.file.path;
 
-    // Encrypt file if requested
-    if (encrypt === 'true') {
-      console.log('🔒 Encrypting model file...');
-      const password = crypto.randomBytes(32).toString('hex'); // Generate encryption key
-      const { encryptedPath, fileHash } = await encryptFile(req.file.path, password);
-      
-      // Store encryption key securely (in real app, this would be encrypted with buyer's public key)
-      const encryptionData = {
-        password: password,
-        algorithm: 'aes-256-gcm',
-        originalFilename: req.file.originalname
-      };
+    // Always encrypt files for security (this is our value proposition)
+    console.log('🔒 Encrypting model file for security...');
+    const password = crypto.randomBytes(32).toString('hex'); // Generate secure encryption key
+    const { encryptedPath, fileHash } = await encryptFile(req.file.path, password);
+    
+    // Store encryption key securely with metadata
+    const encryptionData = {
+      password: password,
+      algorithm: 'aes-256-gcm',
+      originalFilename: req.file.originalname,
+      encryptedAt: new Date().toISOString(),
+      modelId: modelId,
+      creator: creator
+    };
 
-      // Save encryption info
-      fs.writeJsonSync(encryptedPath + '.key', encryptionData);
-      
-      // Remove original file
-      fs.unlinkSync(req.file.path);
-      
-      finalFilePath = encryptedPath;
-      encryptedHash = fileHash;
-      console.log('✅ Model file encrypted successfully');
-    }
+    // Save encryption info to secure key file
+    fs.writeJsonSync(encryptedPath + '.key', encryptionData);
+    
+    // Remove original unencrypted file for security
+    fs.unlinkSync(req.file.path);
+    
+    finalFilePath = encryptedPath;
+    encryptedHash = fileHash;
+    console.log('✅ Model file encrypted and secured successfully');
+    console.log('🔐 Encryption hash:', fileHash.substring(0, 16) + '...');
 
     // Create new model entry
     const newModel = {
@@ -224,7 +248,7 @@ app.post('/api/models/publish', upload.single('file'), async (req, res) => {
       creator,
       filePath: finalFilePath,
       encryptedHash,
-      encrypted: encrypt === 'true',
+      encrypted: true, // All models are now encrypted by default
       fileSize: req.file.size,
       originalFilename: req.file.originalname,
       createdAt: new Date(),
@@ -238,8 +262,9 @@ app.post('/api/models/publish', upload.single('file'), async (req, res) => {
     console.log('✅ Model published successfully:', {
       modelId,
       name,
-      encrypted: encrypt === 'true',
-      encryptedHash
+      encrypted: true,
+      encryptedHash,
+      security: 'AES-256-GCM encryption applied'
     });
 
     res.json({

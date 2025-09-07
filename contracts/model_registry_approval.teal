@@ -1,0 +1,262 @@
+#pragma version 8
+txn ApplicationID
+int 0
+==
+bnz main_l23
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "publish_model"
+==
+&&
+bnz main_l22
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "get_model"
+==
+&&
+bnz main_l21
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "get_model_count"
+==
+&&
+bnz main_l20
+txn OnCompletion
+int NoOp
+==
+txn NumAppArgs
+int 1
+>=
+&&
+txna ApplicationArgs 0
+byte "model_exists"
+==
+&&
+bnz main_l16
+txn OnCompletion
+int OptIn
+==
+bnz main_l15
+txn OnCompletion
+int CloseOut
+==
+bnz main_l14
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l13
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l12
+int 1
+bnz main_l11
+err
+main_l11:
+int 0
+return
+main_l12:
+int 0
+return
+main_l13:
+int 0
+return
+main_l14:
+int 1
+return
+main_l15:
+int 1
+return
+main_l16:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 1
+btoi
+int 0
+>
+assert
+byte "MODEL_EXISTS:"
+txna ApplicationArgs 1
+btoi
+byte "model_count"
+app_global_get
+<=
+byte 0x6369645f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+len
+int 0
+>
+&&
+bnz main_l19
+byte "0"
+main_l18:
+concat
+log
+int 1
+return
+main_l19:
+byte "1"
+b main_l18
+main_l20:
+byte "MODEL_COUNT:"
+byte "model_count"
+app_global_get
+itob
+concat
+log
+int 1
+return
+main_l21:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 1
+btoi
+int 0
+>
+assert
+txna ApplicationArgs 1
+btoi
+byte "model_count"
+app_global_get
+<=
+assert
+byte "MODEL_DATA:"
+txna ApplicationArgs 1
+concat
+log
+byte "CID:"
+byte 0x6369645f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+log
+byte "PUBLISHER:"
+byte 0x7075625f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+log
+byte "LICENSE:"
+byte 0x6c69635f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+log
+byte "TIMESTAMP:"
+byte 0x74735f
+txna ApplicationArgs 1
+btoi
+itob
+concat
+app_global_get
+concat
+log
+int 1
+return
+main_l22:
+txn NumAppArgs
+int 4
+==
+assert
+txna ApplicationArgs 1
+len
+int 0
+>
+assert
+txna ApplicationArgs 3
+len
+int 0
+>
+assert
+byte "model_count"
+byte "model_count"
+app_global_get
+int 1
++
+app_global_put
+byte 0x6369645f
+byte "model_count"
+app_global_get
+itob
+concat
+txna ApplicationArgs 1
+app_global_put
+byte 0x7075625f
+byte "model_count"
+app_global_get
+itob
+concat
+txna ApplicationArgs 2
+app_global_put
+byte 0x6c69635f
+byte "model_count"
+app_global_get
+itob
+concat
+txna ApplicationArgs 3
+app_global_put
+byte 0x74735f
+byte "model_count"
+app_global_get
+itob
+concat
+global LatestTimestamp
+itob
+app_global_put
+byte "MODEL_PUBLISHED:"
+byte "model_count"
+app_global_get
+itob
+concat
+byte ":"
+concat
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+txna ApplicationArgs 2
+concat
+log
+int 1
+return
+main_l23:
+byte "model_count"
+int 0
+app_global_put
+int 1
+return

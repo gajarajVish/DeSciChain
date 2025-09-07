@@ -1,0 +1,66 @@
+{
+  "name": "ModelRegistry",
+  "description": "Smart contract for registering ML models on Algorand",
+  "methods": [
+    {
+      "name": "publish_model",
+      "args": [
+        {
+          "type": "string",
+          "name": "cid",
+          "desc": "IPFS CID of the model"
+        },
+        {
+          "type": "address",
+          "name": "publisher",
+          "desc": "Publisher address"
+        },
+        {
+          "type": "string",
+          "name": "license_terms",
+          "desc": "License terms"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Model published successfully"
+      }
+    },
+    {
+      "name": "get_model",
+      "args": [
+        {
+          "type": "uint64",
+          "name": "model_id",
+          "desc": "Model ID to retrieve"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Model data returned via logs"
+      }
+    },
+    {
+      "name": "get_model_count",
+      "args": [],
+      "returns": {
+        "type": "void",
+        "desc": "Total number of models returned via logs"
+      }
+    },
+    {
+      "name": "model_exists",
+      "args": [
+        {
+          "type": "uint64",
+          "name": "model_id",
+          "desc": "Model ID to check"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Existence status returned via logs"
+      }
+    }
+  ]
+}

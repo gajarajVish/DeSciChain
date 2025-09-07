@@ -9,10 +9,13 @@ CREATE TABLE IF NOT EXISTS published_models (
     algorand_txn_id VARCHAR(255) NOT NULL,
     blockchain_model_id INTEGER NOT NULL,
     encryption_key_hash VARCHAR(255) NOT NULL,
+    encryption_metadata JSONB, -- Metadata about encryption (algorithm, key derivation, etc.)
     license_terms JSONB NOT NULL,
     watermark VARCHAR(255),
     watermark_position INTEGER,
     publisher_address VARCHAR(255) NOT NULL,
+    file_size BIGINT, -- File size in bytes
+    price_algo DECIMAL(10, 6), -- Price in ALGO
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -98,6 +101,63 @@ CREATE TABLE IF NOT EXISTS escrow_states (
     completed_at TIMESTAMP
 );
 
+-- Model Access Keys Table (secure key delivery)
+CREATE TABLE IF NOT EXISTS model_access_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    model_id UUID REFERENCES published_models(id) ON DELETE CASCADE,
+    buyer_address VARCHAR(255) NOT NULL,
+    encrypted_key TEXT NOT NULL, -- RSA-encrypted key for buyer
+    key_hash VARCHAR(255) NOT NULL, -- Hash of the original key
+    key_type VARCHAR(50) DEFAULT 'AES-256-GCM', -- Encryption algorithm used
+    access_granted_at TIMESTAMP DEFAULT NOW(),
+    access_expires_at TIMESTAMP, -- Optional expiration
+    download_count INTEGER DEFAULT 0,
+    max_downloads INTEGER DEFAULT 10, -- Limit downloads
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- API Keys Table (for backend authentication)
+CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key_hash VARCHAR(255) NOT NULL UNIQUE,
+    key_name VARCHAR(255),
+    permissions JSONB, -- Array of permissions
+    lab_id UUID REFERENCES labs(id) ON DELETE CASCADE,
+    is_active BOOLEAN DEFAULT true,
+    last_used_at TIMESTAMP,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Pending Models Table (before blockchain confirmation)
+CREATE TABLE IF NOT EXISTS pending_models (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    publisher_address VARCHAR(255) NOT NULL,
+    framework VARCHAR(100),
+    model_type VARCHAR(100),
+    price DECIMAL(10, 6) NOT NULL,
+    license_terms VARCHAR(100),
+    tags TEXT[],
+    file_size BIGINT,
+    cid VARCHAR(255) NOT NULL,
+    encryption_metadata JSONB,
+    encryption_key_hash VARCHAR(255) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending_blockchain',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Pending Purchases Table (before blockchain confirmation)
+CREATE TABLE IF NOT EXISTS pending_purchases (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    model_id UUID NOT NULL,
+    buyer_address VARCHAR(255) NOT NULL,
+    price INTEGER NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending_payment',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_published_models_lab_id ON published_models(lab_id);
 CREATE INDEX IF NOT EXISTS idx_published_models_created_at ON published_models(created_at);
@@ -112,6 +172,14 @@ CREATE INDEX IF NOT EXISTS idx_model_downloads_model_id ON model_downloads(model
 CREATE INDEX IF NOT EXISTS idx_escrow_states_escrow_id ON escrow_states(escrow_id);
 CREATE INDEX IF NOT EXISTS idx_escrow_states_buyer ON escrow_states(buyer);
 CREATE INDEX IF NOT EXISTS idx_escrow_states_publisher ON escrow_states(publisher);
+CREATE INDEX IF NOT EXISTS idx_model_access_keys_model_id ON model_access_keys(model_id);
+CREATE INDEX IF NOT EXISTS idx_model_access_keys_buyer ON model_access_keys(buyer_address);
+CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+CREATE INDEX IF NOT EXISTS idx_api_keys_lab_id ON api_keys(lab_id);
+CREATE INDEX IF NOT EXISTS idx_pending_models_publisher ON pending_models(publisher_address);
+CREATE INDEX IF NOT EXISTS idx_pending_models_status ON pending_models(status);
+CREATE INDEX IF NOT EXISTS idx_pending_purchases_buyer ON pending_purchases(buyer_address);
+CREATE INDEX IF NOT EXISTS idx_pending_purchases_model_id ON pending_purchases(model_id);
 
 -- Triggers for updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
