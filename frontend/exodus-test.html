@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exodus Wallet Test - DeSciChain</title>
+    <link rel="stylesheet" href="./styles/app.css">
+    <style>
+        .exodus-test {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--surface);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border);
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+        }
+        .wallet-info {
+            background: var(--background);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin: 1rem 0;
+        }
+        .debug-info {
+            background: var(--surface);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+        .status {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            margin: 0.5rem 0;
+        }
+        .status.success { background: rgba(34, 197, 94, 0.1); color: var(--success); }
+        .status.error { background: rgba(239, 68, 68, 0.1); color: var(--error); }
+        .status.warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    </style>
+</head>
+<body>
+    <div class="exodus-test">
+        <h1>🚀 Exodus Wallet Connection Test</h1>
+        <p>This page helps you connect specifically with Exodus wallet and test the purchase flow.</p>
+
+        <div class="test-section">
+            <h2>Step 1: Wallet Detection</h2>
+            <button id="detect-wallets" class="btn btn-primary">🔍 Detect Available Wallets</button>
+            <div id="detection-results" class="debug-info" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Step 2: Connect Exodus Wallet</h2>
+            <button id="connect-exodus" class="btn btn-secondary" disabled>🔌 Connect to Exodus</button>
+            <div id="connection-status"></div>
+            <div id="wallet-info" class="wallet-info" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Step 3: Test Purchase</h2>
+            <button id="test-purchase" class="btn btn-success" disabled>💰 Test Model Purchase</button>
+            <div id="purchase-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Step 4: Go to Main App</h2>
+            <a href="./marketplace.html" class="btn btn-primary">🏪 Open Marketplace</a>
+            <p><small>Once Exodus is working here, it should work in the main app too.</small></p>
+        </div>
+    </div>
+
+    <!-- Include the blockchain service -->
+    <script src="https://unpkg.com/algosdk@2.7.0/dist/browser/algosdk.min.js"></script>
+    <script src="./js/services/blockchain.js"></script>
+
+    <script>
+        let blockchainService;
+        let detectionResults = {};
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Exodus Test Page Loaded');
+            
+            // Initialize blockchain service
+            blockchainService = new BlockchainService();
+            await blockchainService.initialize();
+
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('detect-wallets').addEventListener('click', detectWallets);
+            document.getElementById('connect-exodus').addEventListener('click', connectExodus);
+            document.getElementById('test-purchase').addEventListener('click', testPurchase);
+        }
+
+        async function detectWallets() {
+            const resultsDiv = document.getElementById('detection-results');
+            const connectBtn = document.getElementById('connect-exodus');
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = 'Detecting wallets...';
+
+            try {
+                // Check for various wallet providers
+                detectionResults = {
+                    'window.algorand': !!window.algorand,
+                    'window.exodus': !!window.exodus,
+                    'window.exodus.algorand': !!window.exodus?.algorand,
+                    'window.AlgoSigner': !!window.AlgoSigner,
+                    'algorandKeys': window.algorand ? Object.keys(window.algorand) : null,
+                    'exodusKeys': window.exodus ? Object.keys(window.exodus) : null
+                };
+
+                // Get available wallets from service
+                const availableWallets = blockchainService.getAvailableWallets();
+                detectionResults.availableWallets = availableWallets.map(w => w.name);
+
+                // Display results
+                resultsDiv.innerHTML = `<pre>${JSON.stringify(detectionResults, null, 2)}</pre>`;
+
+                // Enable connect button if Exodus detected
+                if (detectionResults['window.algorand'] || detectionResults['window.exodus.algorand']) {
+                    connectBtn.disabled = false;
+                    connectBtn.innerHTML = '🔌 Connect to Exodus (Detected!)';
+                } else {
+                    showStatus('connection-status', 'warning', '⚠️ Exodus wallet not detected. Please make sure Exodus is installed and Algorand is enabled.');
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML = `Error: ${error.message}`;
+                showStatus('connection-status', 'error', `Detection failed: ${error.message}`);
+            }
+        }
+
+        async function connectExodus() {
+            const connectBtn = document.getElementById('connect-exodus');
+            const originalText = connectBtn.innerHTML;
+            
+            try {
+                connectBtn.innerHTML = '🔌 Connecting...';
+                connectBtn.disabled = true;
+
+                showStatus('connection-status', 'warning', '🔄 Connecting to Exodus wallet...');
+
+                // Try to connect
+                const address = await blockchainService.connectWallet('exodus');
+
+                if (address) {
+                    showStatus('connection-status', 'success', '✅ Connected to Exodus wallet!');
+                    
+                    // Display wallet info
+                    const walletInfo = {
+                        address: address,
+                        balance: blockchainService.getBalance(),
+                        walletType: blockchainService.getWalletType(),
+                        walletName: blockchainService.getWalletName()
+                    };
+
+                    document.getElementById('wallet-info').innerHTML = `
+                        <h3>Connected Wallet Info:</h3>
+                        <pre>${JSON.stringify(walletInfo, null, 2)}</pre>
+                    `;
+                    document.getElementById('wallet-info').style.display = 'block';
+
+                    // Enable test purchase
+                    document.getElementById('test-purchase').disabled = false;
+                    connectBtn.innerHTML = '✅ Connected to Exodus';
+                    
+                } else {
+                    throw new Error('No address returned from wallet connection');
+                }
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                showStatus('connection-status', 'error', `❌ Connection failed: ${error.message}`);
+                connectBtn.innerHTML = originalText;
+                connectBtn.disabled = false;
+            }
+        }
+
+        async function testPurchase() {
+            const testBtn = document.getElementById('test-purchase');
+            const originalText = testBtn.innerHTML;
+
+            try {
+                testBtn.innerHTML = '💰 Testing...';
+                testBtn.disabled = true;
+
+                showStatus('purchase-status', 'warning', '🔄 Testing purchase with Exodus...');
+
+                // Test purchase with mock data
+                const result = await blockchainService.buyModel(
+                    'test-model-123',
+                    1.0, // 1 ALGO
+                    'SELLER1WALLET123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ23456789A'
+                );
+
+                showStatus('purchase-status', 'success', `✅ Purchase test successful! Transaction: ${result.txId}`);
+                testBtn.innerHTML = '✅ Test Completed';
+
+            } catch (error) {
+                console.error('Purchase test error:', error);
+                showStatus('purchase-status', 'error', `❌ Purchase test failed: ${error.message}`);
+                testBtn.innerHTML = originalText;
+                testBtn.disabled = false;
+            }
+        }
+
+        function showStatus(elementId, type, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>

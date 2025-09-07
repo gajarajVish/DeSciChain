@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeSciFi - ML Models Marketplace</title>
+    <title>DeSciFi - Medical AI Marketplace</title>
     
     <!-- Styles -->
     <link rel="stylesheet" href="./styles/app.css">
@@ -80,7 +80,7 @@
                         </div>
                         <div class="logo-text">
                             <h1>DeSciFi</h1>
-                            <span class="tagline">ML Models Marketplace</span>
+                            <span class="tagline">Medical AI Marketplace</span>
                         </div>
                     </div>
                 </div>
@@ -121,8 +121,8 @@
                 <!-- Marketplace Tab -->
                 <div id="marketplace-tab" class="tab-pane active">
                     <div class="section-header">
-                        <h2>ML Models Marketplace</h2>
-                        <p>Discover and purchase cutting-edge machine learning models</p>
+                        <h2>Medical AI Models</h2>
+                        <p>Secure, blockchain-verified medical research AI models</p>
                     </div>
                     
                     <div class="models-grid" id="models-container">
@@ -133,20 +133,20 @@
                 <!-- Publish Tab -->
                 <div id="publish-tab" class="tab-pane">
                     <div class="section-header">
-                        <h2>Publish Your Model</h2>
-                        <p>Share your machine learning model with the DeSciFi community</p>
+                        <h2>Publish Medical AI</h2>
+                        <p>Share your medical research model securely on blockchain</p>
                     </div>
                     
                     <div class="publish-container">
                         <form id="publish-model-form" class="publish-form">
                             <div class="form-group">
                                 <label for="model-name">Model Name *</label>
-                                <input type="text" id="model-name" name="name" required placeholder="e.g., Advanced Image Classifier">
+                                <input type="text" id="model-name" name="name" required placeholder="e.g., Radiology Diagnostic AI">
                             </div>
                             
                             <div class="form-group">
                                 <label for="model-description">Description *</label>
-                                <textarea id="model-description" name="description" required rows="4" placeholder="Describe your model's capabilities and use cases"></textarea>
+                                <textarea id="model-description" name="description" required rows="4" placeholder="Describe your model's medical applications and clinical validation"></textarea>
                             </div>
                             
                             <div class="form-row">
@@ -164,12 +164,12 @@
                                 <div class="form-group">
                                     <label for="model-type">Model Type</label>
                                     <select id="model-type" name="type">
-                                        <option value="classification">Classification</option>
-                                        <option value="regression">Regression</option>
-                                        <option value="nlp">NLP</option>
-                                        <option value="computer-vision">Computer Vision</option>
-                                        <option value="reinforcement-learning">Reinforcement Learning</option>
-                                        <option value="other">Other</option>
+                                        <option value="diagnostic-imaging">Diagnostic Imaging</option>
+                                        <option value="drug-discovery">Drug Discovery</option>
+                                        <option value="genomics">Genomics</option>
+                                        <option value="clinical-prediction">Clinical Prediction</option>
+                                        <option value="pathology">Digital Pathology</option>
+                                        <option value="other">Other Medical AI</option>
                                     </select>
                                 </div>
                             </div>
@@ -198,8 +198,8 @@
                             
                             <div class="form-group">
                                 <label for="model-tags">Tags</label>
-                                <input type="text" id="model-tags" name="tags" placeholder="e.g., image-recognition, deep-learning, computer-vision">
-                                <small class="form-help">Comma-separated tags to help users find your model</small>
+                                <input type="text" id="model-tags" name="tags" placeholder="e.g., radiology, mri, cancer-detection, fda-approved">
+                                <small class="form-help">Medical specialties and validation status</small>
                             </div>
                             
                             <div class="form-actions">
@@ -215,8 +215,8 @@
                 <!-- My Models Tab -->
                 <div id="my-models-tab" class="tab-pane">
                     <div class="section-header">
-                        <h2>My Models</h2>
-                        <p>Manage your published and purchased models</p>
+                        <h2>My Collection</h2>
+                        <p>Your published and licensed medical AI models</p>
                     </div>
                     
                     <div class="my-models-container">
@@ -282,6 +282,7 @@
 
     <!-- App Scripts -->
     <script src="./js/services/api.js"></script>
+    <script src="./js/services/smartContract.js"></script>
     <script src="./js/services/blockchain.js?v=1757252105"></script>
     <script src="./js/utils/helpers.js"></script>
     <script src="./js/app.js?v=1757250299"></script>

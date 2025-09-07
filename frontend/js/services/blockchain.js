@@ -10,6 +10,7 @@ class BlockchainService {
         this.isInitialized = false;
         this.connectedAccount = null;
         this.availableWallets = [];
+        this.smartContractService = null;
     }
 
     async initialize() {
@@ -25,6 +26,12 @@ class BlockchainService {
             
             // Detect available wallets
             await this.detectAvailableWallets();
+            
+            // Initialize smart contract service
+            if (window.SmartContractService) {
+                this.smartContractService = new window.SmartContractService();
+                await this.smartContractService.initialize(this.algodClient);
+            }
             
             this.isInitialized = true;
             console.log('✅ Blockchain service initialized successfully');
@@ -98,7 +105,7 @@ class BlockchainService {
             this.availableWallets.push({
                 id: 'exodus',
                 name: 'Exodus Wallet',
-                icon: 'https://exodus.com/favicon.ico',
+                icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiMwNDhiZmYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCAxMkwxMy4wOSAxNS43NEwxMiAyMkwxMC45MSAxNS43NEw0IDEyTDEwLjkxIDguMjZMMTIgMloiLz4KPC9zdmc+',
                 connector: this.walletConnectors.exodus || 'available'
             });
             console.log('✅ Exodus Wallet detected');
@@ -678,14 +685,30 @@ class BlockchainService {
                     break;
                     
                 case 'exodus':
+                    const exodusEncodedTxn = algosdk.encodeUnsignedTransaction(txn);
+                    const exodusBase64Txn = Buffer.from(exodusEncodedTxn).toString('base64');
+                    
+                    console.log('🔍 Exodus transaction encoding:', {
+                        encodedLength: exodusEncodedTxn.length,
+                        base64Length: exodusBase64Txn.length
+                    });
+                    
                     signedTxn = await window.algorand.signTxn([{
-                        txn: algosdk.encodeUnsignedTransaction(txn)
+                        txn: exodusBase64Txn
                     }]);
                     break;
                     
                 case 'algosigner':
+                    const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
+                    const base64Txn = Buffer.from(encodedTxn).toString('base64');
+                    
+                    console.log('🔍 AlgoSigner transaction encoding:', {
+                        encodedLength: encodedTxn.length,
+                        base64Length: base64Txn.length
+                    });
+                    
                     signedTxn = await window.AlgoSigner.signTxn([{
-                        txn: algosdk.encodeUnsignedTransaction(txn)
+                        txn: base64Txn
                     }]);
                     break;
                     
@@ -918,12 +941,43 @@ class BlockchainService {
 
             console.log(`💰 Purchasing model ${modelId} for ${price} ALGO from ${sellerAddress}`);
             
+            // Check if trying to buy from yourself
+            if (this.connectedAccount.address === sellerAddress) {
+                throw new Error(`Cannot purchase your own model. Seller and buyer addresses are the same.`);
+            }
+            
             // Check if user has sufficient balance
             if (this.connectedAccount.balance < price) {
                 throw new Error(`Insufficient balance. You have ${this.connectedAccount.balance} ALGO, need ${price} ALGO`);
             }
 
-            // Create payment transaction
+            // Handle demo wallet differently (skip real blockchain operations)
+            if (this.connectedAccount.walletType === 'demo') {
+                console.log('🎭 Demo wallet: Simulating model purchase...');
+                
+                // Simulate processing time
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Deduct balance
+                this.connectedAccount.balance -= price;
+                console.log(`💰 Demo wallet: New balance: ${this.connectedAccount.balance} ALGO`);
+                
+                // Generate fake transaction ID
+                const fakeTxId = 'DEMO_TX_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                
+                console.log(`✅ Demo model purchase completed! Transaction: ${fakeTxId}`);
+                
+                return {
+                    txId: fakeTxId,
+                    modelId: modelId,
+                    price: price,
+                    seller: sellerAddress,
+                    buyer: this.connectedAccount.address,
+                    status: 'completed'
+                };
+            }
+
+            // Create payment transaction for real wallets
             const txn = await this.createPaymentTransaction(
                 this.connectedAccount.address,
                 sellerAddress,
@@ -1158,6 +1212,211 @@ class BlockchainService {
         } catch (error) {
             console.error('❌ Faucet request failed:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Smart Contract Integration Methods
+     */
+
+    async publishModelToContract(modelCID, licenseTerms) {
+        try {
+            if (!this.smartContractService) {
+                throw new Error('Smart contract service not available');
+            }
+
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            console.log('📋 Publishing model to smart contract...');
+
+            const txn = await this.smartContractService.publishModel(
+                this.connectedAccount.address,
+                modelCID,
+                licenseTerms
+            );
+
+            const result = await this.signAndSubmitTransaction(txn);
+            console.log('✅ Model published to smart contract:', result.txId);
+            
+            return result;
+
+        } catch (error) {
+            console.error('❌ Error publishing model to contract:', error);
+            throw error;
+        }
+    }
+
+    async purchaseModelViaContract(sellerAddress, modelId, priceInAlgo) {
+        try {
+            if (!this.smartContractService) {
+                throw new Error('Smart contract service not available');
+            }
+
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            console.log('🔒 Creating escrow purchase...');
+
+            const priceInMicroAlgos = Math.round(priceInAlgo * 1000000);
+            const txns = await this.smartContractService.createEscrow(
+                this.connectedAccount.address,
+                sellerAddress,
+                modelId,
+                priceInMicroAlgos
+            );
+
+            const results = await this.signAndSubmitTransactionGroup(txns);
+            console.log('✅ Escrow purchase completed:', results);
+            
+            return results;
+
+        } catch (error) {
+            console.error('❌ Error purchasing model via contract:', error);
+            throw error;
+        }
+    }
+
+    async releaseEscrowFunds(escrowId) {
+        try {
+            if (!this.smartContractService) {
+                throw new Error('Smart contract service not available');
+            }
+
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            console.log('💰 Releasing escrow funds...');
+
+            const txn = await this.smartContractService.releaseEscrow(
+                this.connectedAccount.address,
+                escrowId
+            );
+
+            const result = await this.signAndSubmitTransaction(txn);
+            console.log('✅ Escrow funds released:', result.txId);
+            
+            return result;
+
+        } catch (error) {
+            console.error('❌ Error releasing escrow funds:', error);
+            throw error;
+        }
+    }
+
+    async signAndSubmitTransactionGroup(txns) {
+        try {
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            console.log('✍️ Signing transaction group...');
+
+            let signedTxns;
+
+            // Handle demo wallet differently
+            if (this.connectedAccount.walletType === 'demo') {
+                console.log('🎭 Demo wallet: Simulating transaction group submission...');
+                
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                const fakeTxIds = txns.map(() => 
+                    'DEMO_TX_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9).toUpperCase()
+                );
+                
+                return {
+                    txIds: fakeTxIds,
+                    confirmed: true
+                };
+            }
+
+            // Real wallet signing
+            switch (this.connectedAccount.walletType) {
+                case 'pera':
+                    signedTxns = await this.walletConnectors.pera.signTransaction([txns]);
+                    break;
+                    
+                case 'defly':
+                    signedTxns = await this.walletConnectors.defly.signTransaction([txns]);
+                    break;
+                    
+                case 'algosigner':
+                    const txnsToSign = txns.map(txn => ({
+                        txn: Buffer.from(algosdk.encodeUnsignedTransaction(txn)).toString('base64')
+                    }));
+                    
+                    const signedGroup = await window.AlgoSigner.signTxn(txnsToSign);
+                    signedTxns = signedGroup.map(stxn => stxn.blob);
+                    break;
+                    
+                default:
+                    throw new Error(`Unsupported wallet type: ${this.connectedAccount.walletType}`);
+            }
+
+            // Submit transaction group
+            console.log('📤 Submitting transaction group to network...');
+            const { txId } = await this.algodClient.sendRawTransaction(signedTxns).do();
+            
+            // Wait for confirmation
+            console.log('⏳ Waiting for confirmation...');
+            const confirmedTxn = await algosdk.waitForConfirmation(this.algodClient, txId, 4);
+            
+            console.log('✅ Transaction group confirmed in round:', confirmedTxn['confirmed-round']);
+            
+            return {
+                txIds: [txId], // Group leader transaction ID
+                confirmed: true,
+                round: confirmedTxn['confirmed-round']
+            };
+
+        } catch (error) {
+            console.error('❌ Transaction group signing/submission failed:', error);
+            throw error;
+        }
+    }
+
+    async getModelFromContract(modelId) {
+        try {
+            if (!this.smartContractService) {
+                throw new Error('Smart contract service not available');
+            }
+
+            return await this.smartContractService.getModelFromContract(modelId);
+
+        } catch (error) {
+            console.error('❌ Error reading model from contract:', error);
+            throw error;
+        }
+    }
+
+    async verifyModelOwnership(modelId, userAddress) {
+        try {
+            if (!this.smartContractService) {
+                return false;
+            }
+
+            return await this.smartContractService.verifyModelOwnership(modelId, userAddress);
+
+        } catch (error) {
+            console.error('❌ Error verifying model ownership:', error);
+            return false;
+        }
+    }
+
+    async hasUserPurchasedModel(modelId, userAddress) {
+        try {
+            if (!this.smartContractService) {
+                return false;
+            }
+
+            return await this.smartContractService.hasUserPurchasedModel(modelId, userAddress);
+
+        } catch (error) {
+            console.error('❌ Error checking model purchase status:', error);
+            return false;
         }
     }
 }
