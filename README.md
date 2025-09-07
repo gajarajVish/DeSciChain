@@ -1,5 +1,5 @@
 # DeSciFi - Decentralized ML Models Marketplace
-
+https://www.canva.com/design/DAGyRO3y_Js/SOR9WB3LRumuls-AN3XCEA/edit?utm_content=DAGyRO3y_Js&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton 
 A production-ready, blockchain-based marketplace for machine learning models built on Algorand with IPFS storage, featuring advanced cryptography, multi-wallet support, and comprehensive model protection through watermarking and encryption.
 
 <img width="1030" height="901" alt="image" src="https://github.com/user-attachments/assets/97f3b797-ced8-4e91-bc30-2d36fd83c516" />
