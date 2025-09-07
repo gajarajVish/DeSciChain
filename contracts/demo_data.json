@@ -1,0 +1,37 @@
+{
+  "network": "testnet",
+  "name_registry_app_id": 745493991,
+  "creator_address": "UZCPSQ7OFDEGTRCMTP2V2G7MKFMZMZ5PUAQS2BSGRLAUQNS337GZC7TYMU",
+  "registered_names": [
+    {
+      "name": "vishvag.desci",
+      "tx_id": "DEMOVISHVAG123456789",
+      "price_algo": 1.0,
+      "description": "Vishva Gajaraj's DeSci Model Registry",
+      "cid": "QmVishvaModelHashABCDEFGHIJKLMNOPQRSTUVWXYZ123456789",
+      "owner": "I5LZ6P7NODDC3V275WU2RSAHN6OT4PBC2WDDMBYU6Q35JBUXA4FQSVLX4I"
+    },
+    {
+      "name": "smith.desci",
+      "tx_id": "DEMO1234567890ABCDEF",
+      "price_algo": 2.0,
+      "description": "Dr. Smith's Neural Network Model for Protein Folding",
+      "cid": "QmExampleSmithModelHashABCDEFGHIJKLMNOPQRSTUVWXYZ123456789"
+    },
+    {
+      "name": "quantlab.desci",
+      "tx_id": "DEMO0987654321FEDCBA",
+      "price_algo": 8.0,
+      "description": "QuantumLab's Advanced ML Model for Drug Discovery",
+      "cid": "QmQuantumLabCIDHashXYZABCDEFGHIJKLMNOPQRSTUVWXYZ987654321"
+    },
+    {
+      "name": "biotech.desci",
+      "tx_id": "DEMO1122334455667788",
+      "price_algo": 5.0,
+      "description": "BioTech Institute's Genomics Analysis Model",
+      "cid": "QmBiotechModelHashDEFGHIJKLMNOPQRSTUVWXYZ123456789ABCDEF"
+    }
+  ],
+  "initialization_timestamp": 1725666000
+}

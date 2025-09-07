@@ -1,6 +1,6 @@
 /**
- * Models Routes for DeSciChain
- * Handles model publishing, purchasing, and downloading
+ * Secure Models Routes for DeSciChain
+ * Implements wallet-first flows with no server-side private key handling
  */
 declare const router: import("express-serve-static-core").Router;
 export default router;

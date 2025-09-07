@@ -15,6 +15,7 @@ from pyteal import compileTeal, Mode
 # Import contract programs
 from ModelRegistry import approval_program as model_registry_approval, clear_state_program as model_registry_clear
 from Escrow import approval_program as escrow_approval, clear_state_program as escrow_clear
+from NameRegistry import approval_program as name_registry_approval, clear_state_program as name_registry_clear
 
 # Configuration
 ALGOD_TOKEN = os.getenv("ALGOD_TOKEN", "")
@@ -57,7 +58,7 @@ def deploy_contract(client, creator_address, creator_private_key, approval_teal,
         on_complete=0,  # NoOp
         approval_program=base64.b64decode(approval_result['result']),
         clear_program=base64.b64decode(clear_result['result']),
-        global_schema=StateSchema(num_uints=50, num_byte_slices=50),
+        global_schema=StateSchema(num_uints=32, num_byte_slices=32),
         local_schema=StateSchema(num_uints=0, num_byte_slices=0),
         app_args=app_args or []
     )
@@ -91,6 +92,11 @@ def main():
             escrow_approval, escrow_clear
         )
         
+        print("Compiling NameRegistry contract...")
+        name_registry_approval_teal, name_registry_clear_teal = compile_contract(
+            name_registry_approval, name_registry_clear
+        )
+        
         # Deploy ModelRegistry
         print("Deploying ModelRegistry contract...")
         model_registry_app_id, model_registry_tx_id = deploy_contract(
@@ -105,6 +111,13 @@ def main():
             escrow_approval_teal, escrow_clear_teal
         )
         
+        # Deploy NameRegistry
+        print("Deploying NameRegistry contract...")
+        name_registry_app_id, name_registry_tx_id = deploy_contract(
+            client, creator_address, creator_private_key,
+            name_registry_approval_teal, name_registry_clear_teal
+        )
+        
         # Save deployment info
         deployment_info = {
             "network": "testnet",
@@ -117,6 +130,10 @@ def main():
                 "escrow": {
                     "app_id": escrow_app_id,
                     "tx_id": escrow_tx_id
+                },
+                "name_registry": {
+                    "app_id": name_registry_app_id,
+                    "tx_id": name_registry_tx_id
                 }
             },
             "deployment_timestamp": client.status().get("time", "unknown")
@@ -130,6 +147,8 @@ def main():
         print(f"ModelRegistry TX ID: {model_registry_tx_id}")
         print(f"Escrow App ID: {escrow_app_id}")
         print(f"Escrow TX ID: {escrow_tx_id}")
+        print(f"NameRegistry App ID: {name_registry_app_id}")
+        print(f"NameRegistry TX ID: {name_registry_tx_id}")
         print(f"Deployment info saved to: deployment_info.json")
         
         return deployment_info

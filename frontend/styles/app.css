@@ -843,3 +843,184 @@ textarea {
 .text-success { color: var(--success) !important; }
 .text-error { color: var(--error) !important; }
 .text-muted { color: var(--text-muted) !important; }
+/* Model Details Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: var(--background);
+    border-radius: 12px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover);
+}
+
+.modal-body {
+    padding: 32px;
+}
+
+.model-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+    .model-details-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+}
+
+.detail-section {
+    margin-bottom: 24px;
+}
+
+.detail-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px 0;
+    color: var(--primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-item label {
+    font-weight: 500;
+    color: var(--text-muted);
+    min-width: 100px;
+}
+
+.detail-item span {
+    color: var(--text-primary);
+    text-align: right;
+    flex: 1;
+}
+
+.model-full-description {
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin: 0;
+    padding: 16px;
+    background: var(--surface-hover);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+.security-section {
+    background: linear-gradient(135deg, 
+        rgba(76, 175, 80, 0.1) 0%, 
+        rgba(139, 195, 74, 0.1) 100%);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.security-section .security-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.security-section .security-info i {
+    color: #4CAF50;
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.security-section strong {
+    color: #4CAF50;
+}
+
+.security-section p {
+    margin: 8px 0 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.security-section small {
+    color: var(--text-muted);
+    font-family: "Courier New", monospace;
+    font-size: 0.8rem;
+}
+
+.monospace {
+    font-family: "Courier New", monospace;
+    font-size: 0.9rem;
+    background: var(--surface-hover);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 24px 32px;
+    border-top: 1px solid var(--border);
+    background: var(--surface-hover);
+    border-radius: 0 0 12px 12px;
+}
+
+.modal-footer .btn {
+    min-width: 120px;
+}
+

@@ -82,7 +82,7 @@ const mockModels = [
     id: '1',
     name: "GPT-4 Fine-tuned for Scientific Research",
     description: "Advanced language model specifically trained on scientific literature and research papers for enhanced academic writing and analysis.",
-    priceAlgo: 250,
+    priceAlgo: 1,
     rating: 4.9,
     downloads: 1247,
     category: "NLP",
@@ -93,8 +93,10 @@ const mockModels = [
     fileSize: 2048000000,
     author: "Dr. Sarah Chen",
     authorAddress: "ALGO123456789ABCDEF...",
+    authorName: "sarahchen.desci",
     ipfsHash: "QmExample1Hash",
     watermarkHash: "WMHash1",
+    filePath: "/Users/vg/Downloads/dummy_model.pth",
     createdAt: new Date(),
     accuracy: 95.2
   },
@@ -102,7 +104,7 @@ const mockModels = [
     id: '2',
     name: "Computer Vision Model for Medical Imaging",
     description: "State-of-the-art CNN for medical image analysis with 98.5% accuracy in detecting anomalies in X-rays and MRI scans.",
-    priceAlgo: 180,
+    priceAlgo: 1,
     rating: 4.8,
     downloads: 892,
     category: "Computer Vision",
@@ -113,8 +115,10 @@ const mockModels = [
     fileSize: 1536000000,
     author: "MedAI Labs",
     authorAddress: "ALGO456789ABCDEF123...",
+    authorName: "medailabs.desci",
     ipfsHash: "QmExample2Hash",
     watermarkHash: "WMHash2",
+    filePath: "/Users/vg/Downloads/dummy_model.pth",
     createdAt: new Date(),
     accuracy: 98.5
   },
@@ -122,7 +126,7 @@ const mockModels = [
     id: '3',
     name: "Predictive Analytics for Financial Markets",
     description: "Machine learning model for stock price prediction using advanced time series analysis and sentiment data integration.",
-    priceAlgo: 320,
+    priceAlgo: 1,
     rating: 4.7,
     downloads: 654,
     category: "Data Analytics",
@@ -133,8 +137,10 @@ const mockModels = [
     fileSize: 512000000,
     author: "QuantLab Research",
     authorAddress: "ALGO789ABCDEF123456...",
+    authorName: "quantlab.desci",
     ipfsHash: "QmExample3Hash",
     watermarkHash: "WMHash3",
+    filePath: "/Users/vg/Downloads/dummy_model.pth",
     createdAt: new Date(),
     accuracy: 87.3
   }
@@ -150,9 +156,23 @@ app.get('/health', (req, res) => {
 });
 
 // Get all models
-app.get('/api/models', (req, res) => {
+app.get('/api/models', async (req, res) => {
   console.log('📊 GET /api/models - Fetching all models');
-  res.json(mockModels);
+  
+  // Resolve author names for all models
+  const modelsWithResolvedNames = await Promise.all(
+    mockModels.map(async (model) => {
+      const resolvedAuthorName = await resolveAddressToName(model.creator || model.authorAddress || model.author);
+      return {
+        ...model,
+        authorDisplayName: resolvedAuthorName,
+        // Keep original for reference
+        originalAuthor: model.creator || model.authorAddress || model.author
+      };
+    })
+  );
+  
+  res.json(modelsWithResolvedNames);
 });
 
 // Get specific model
@@ -258,6 +278,11 @@ app.post('/api/models/publish', upload.single('file'), async (req, res) => {
 
     // Add to mock models array (in real app, this would go to database)
     mockModels.push(newModel);
+    
+    // Record the model as published by this user
+    const currentPublished = userPublishedModels.get(creator) || [];
+    currentPublished.push(modelId);
+    userPublishedModels.set(creator, currentPublished);
 
     console.log('✅ Model published successfully:', {
       modelId,
@@ -293,13 +318,28 @@ app.post('/api/models/purchase', (req, res) => {
   console.log('💳 POST /api/models/purchase - Processing purchase');
   console.log('Request body:', req.body);
   
+  const { modelId, buyerAddress } = req.body;
+  
+  if (!modelId || !buyerAddress) {
+    return res.status(400).json({ error: 'Missing modelId or buyerAddress' });
+  }
+  
   // Simulate purchase processing
   setTimeout(() => {
+    // Record the purchase
+    const currentPurchases = userPurchases.get(buyerAddress) || [];
+    if (!currentPurchases.includes(modelId)) {
+      currentPurchases.push(modelId);
+      userPurchases.set(buyerAddress, currentPurchases);
+    }
+    
     const result = {
       success: true,
-      transactionId: `purchase_${Date.now()}`
+      transactionId: `purchase_${Date.now()}`,
+      modelId,
+      buyerAddress
     };
-    console.log('✅ Purchase successful:', result);
+    console.log('✅ Purchase successful and recorded:', result);
     res.json(result);
   }, 1500);
 });
@@ -309,11 +349,41 @@ app.post('/api/models/download', (req, res) => {
   console.log('⬇️ POST /api/models/download - Processing download');
   console.log('Request body:', req.body);
   
-  // Simulate file download (return mock zip file)
-  const mockZipData = Buffer.from('Mock model file data');
-  res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', 'attachment; filename="model.zip"');
-  res.send(mockZipData);
+  const { modelId, buyerAddress } = req.body;
+  
+  if (!modelId || !buyerAddress) {
+    return res.status(400).json({ error: 'Missing modelId or buyerAddress' });
+  }
+  
+  // Check if user has purchased this model
+  const userPurchasedModels = userPurchases.get(buyerAddress) || [];
+  if (!userPurchasedModels.includes(modelId)) {
+    return res.status(403).json({ error: 'Model not purchased or access denied' });
+  }
+  
+  // Find the model
+  const model = mockModels.find(m => m.id === modelId);
+  if (!model) {
+    return res.status(404).json({ error: 'Model not found' });
+  }
+  
+  // Check if file exists
+  const filePath = model.filePath || '/Users/vg/Downloads/dummy_model.pth';
+  
+  if (fs.existsSync(filePath)) {
+    console.log(`✅ Serving file: ${filePath}`);
+    const fileName = path.basename(filePath);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.download(filePath, fileName);
+  } else {
+    console.log('⚠️ File not found, serving dummy data');
+    // Fallback to mock data if file doesn't exist
+    const mockData = Buffer.from(`Dummy model file for ${model.name}\nFramework: ${model.framework}\nCreated: ${model.createdAt}`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${model.name.replace(/\s+/g, '_')}.pth"`);
+    res.send(mockData);
+  }
 });
 
 // Blockchain status
@@ -348,16 +418,108 @@ app.get('/api/blockchain/transaction/:id', (req, res) => {
   });
 });
 
+// In-memory storage for user purchases and published models
+let userPurchases = new Map(); // address -> [model_ids]
+let userPublishedModels = new Map(); // address -> [model_ids]
+let addressToNameMap = new Map(); // address -> human_readable_name
+
+// Initialize with some demo data
+userPurchases.set('I5LZ6P7NODDC3V275WU2RSAHN6OT4PBC2WDDMBYU6Q35JBUXA4FQSVLX4I', ['1', '2']);
+userPublishedModels.set('I5LZ6P7NODDC3V275WU2RSAHN6OT4PBC2WDDMBYU6Q35JBUXA4FQSVLX4I', []);
+addressToNameMap.set('I5LZ6P7NODDC3V275WU2RSAHN6OT4PBC2WDDMBYU6Q35JBUXA4FQSVLX4I', 'vishvag.desci');
+
+// Function to resolve address to human-readable name
+const resolveAddressToName = async (address) => {
+  // Check local cache first
+  if (addressToNameMap.has(address)) {
+    return addressToNameMap.get(address);
+  }
+  
+  // Set up common address mappings
+  const commonMappings = {
+    'I5LZ6P7NODDC3V275WU2RSAHN6OT4PBC2WDDMBYU6Q35JBUXA4FQSVLX4I': 'vishvag.desci',
+    'TESTDEMOWALLET123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ234567890': 'testdemo.desci',
+    'ALGO123456789ABCDEF...': 'sarahchen.desci',
+    'ALGO456789ABCDEF123...': 'medailabs.desci', 
+    'ALGO789ABCDEF123456...': 'quantlab.desci'
+  };
+  
+  // Check if we have a predefined mapping
+  if (commonMappings[address]) {
+    const name = commonMappings[address];
+    addressToNameMap.set(address, name);
+    return name;
+  }
+  
+  // Try to resolve from name registry API
+  try {
+    const response = await fetch('http://localhost:3002/api/names/marketplace');
+    const data = await response.json();
+    
+    if (data.success) {
+      // Look for a name with this address as owner
+      for (const nameEntry of data.names) {
+        if (nameEntry.owner === address) {
+          addressToNameMap.set(address, nameEntry.name);
+          return nameEntry.name;
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Could not resolve address to name:', error.message);
+  }
+  
+  // Fallback: create a properly shortened version of the address
+  if (address && address.length > 16) {
+    const shortAddress = address.substring(0, 8) + '...' + address.substring(address.length - 8);
+    return shortAddress;
+  }
+  
+  return address || 'Unknown';
+};
+
 // User purchases
 app.get('/api/models/purchases/:address', (req, res) => {
   console.log(`👤 GET /api/models/purchases/${req.params.address} - Fetching user purchases`);
-  res.json([mockModels[0]]); // Return first model as purchased
+  const address = req.params.address;
+  const purchasedModelIds = userPurchases.get(address) || [];
+  const purchasedModels = mockModels.filter(model => purchasedModelIds.includes(model.id));
+  res.json(purchasedModels);
 });
 
 // User models
 app.get('/api/models/user/:address', (req, res) => {
   console.log(`👤 GET /api/models/user/${req.params.address} - Fetching user's published models`);
-  res.json([mockModels[1]]); // Return second model as published by user
+  const address = req.params.address;
+  const publishedModelIds = userPublishedModels.get(address) || [];
+  const publishedModels = mockModels.filter(model => publishedModelIds.includes(model.id));
+  
+  // Also include any models where the creator address matches
+  const authorModels = mockModels.filter(model => model.creator === address || model.authorAddress === address);
+  
+  // Combine and deduplicate
+  const allUserModels = [...new Set([...publishedModels, ...authorModels])];
+  res.json(allUserModels);
+});
+
+// Get human-readable name for address
+app.get('/api/names/resolve-address/:address', async (req, res) => {
+  console.log(`🏷️ GET /api/names/resolve-address/${req.params.address} - Resolving address to name`);
+  const address = req.params.address;
+  
+  try {
+    const humanName = await resolveAddressToName(address);
+    res.json({
+      success: true,
+      address: address,
+      name: humanName
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to resolve address to name'
+    });
+  }
 });
 
 // Start server

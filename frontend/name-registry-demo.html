@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeSci Name Registry - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .demo-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .demo-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .demo-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-height: 600px;
+        }
+
+        .demo-nav {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 15px 20px;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .demo-nav ul {
+            list-style: none;
+            display: flex;
+            gap: 20px;
+        }
+
+        .demo-nav a {
+            text-decoration: none;
+            color: #374151;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .demo-nav a:hover, .demo-nav a.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        .demo-content {
+            padding: 0;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            padding: 20px;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .status-banner {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            color: #1e40af;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            margin: 20px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-header">
+        <h1>🏷️ DeSci Name Registry</h1>
+        <p>Human-readable names for DeSci labs and researchers on Algorand</p>
+    </div>
+
+    <div class="demo-container">
+        <nav class="demo-nav">
+            <ul>
+                <li><a href="#" class="active">Name Registry</a></li>
+                <li><a href="#" onclick="alert('Feature coming soon!')">Register Name</a></li>
+                <li><a href="#" onclick="alert('Feature coming soon!')">My Names</a></li>
+                <li><a href="#" onclick="showContractInfo()">Contract Info</a></li>
+            </ul>
+        </nav>
+
+        <div class="status-banner">
+            ℹ️ Demo Mode - Connected to Algorand TestNet
+        </div>
+
+        <div class="demo-content">
+            <div id="name-registry-content">
+                <!-- Name Registry Component will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>
+            Built for <a href="#" target="_blank">DeSciChain</a> • 
+            Powered by <a href="https://algorand.com" target="_blank">Algorand</a> • 
+            <a href="#" onclick="showApiDocs()">API Docs</a>
+        </p>
+    </div>
+
+    <!-- Load Services and Components -->
+    <script src="js/services/nameRegistry.js"></script>
+    <script src="js/components/NameRegistry.js"></script>
+
+    <script>
+        let nameRegistryComponent;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Initializing Name Registry Demo...');
+            
+            try {
+                // Create and initialize the name registry component
+                nameRegistryComponent = new NameRegistryComponent();
+                nameRegistryComponent.render('name-registry-content');
+                
+                console.log('✅ Name Registry Demo initialized successfully');
+                
+                // Update status banner
+                updateStatus('Connected to TestNet - Ready to use');
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize demo:', error);
+                updateStatus('Failed to connect - Check console for details', 'error');
+            }
+        });
+
+        // Helper functions
+        function updateStatus(message, type = 'info') {
+            const banner = document.querySelector('.status-banner');
+            if (banner) {
+                banner.textContent = `${type === 'error' ? '❌' : 'ℹ️'} ${message}`;
+                banner.className = `status-banner ${type === 'error' ? 'error' : ''}`;
+                
+                if (type === 'error') {
+                    banner.style.background = '#fef2f2';
+                    banner.style.borderColor = '#fecaca';
+                    banner.style.color = '#dc2626';
+                }
+            }
+        }
+
+        async function showContractInfo() {
+            try {
+                const info = await window.nameRegistryService.getRegistryInfo();
+                alert(`Name Registry Contract Info:
+                
+App ID: ${info.app_id}
+Network: ${info.network}
+Creator: ${info.creator}
+Deployed: ${new Date(info.deployment_timestamp * 1000).toLocaleDateString()}
+                `);
+            } catch (error) {
+                alert('Failed to load contract info: ' + error.message);
+            }
+        }
+
+        function showApiDocs() {
+            const docs = `
+DeSci Name Registry API Endpoints:
+
+• GET /api/names/marketplace
+  Get all registered names
+
+• GET /api/names/:name/resolve  
+  Resolve a specific name
+
+• GET /api/names/:name/exists
+  Check if a name exists
+
+• POST /api/names/register
+  Register a new name (requires wallet)
+
+• GET /api/names/info
+  Get contract information
+
+Base URL: http://localhost:3001
+            `;
+            alert(docs);
+        }
+
+        // Add some demo interactions
+        window.addEventListener('load', () => {
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch (e.key) {
+                        case 'r':
+                            e.preventDefault();
+                            if (nameRegistryComponent) {
+                                nameRegistryComponent.refreshMarketplace();
+                            }
+                            break;
+                        case 'f':
+                            e.preventDefault();
+                            const searchInput = document.getElementById('name-search-input');
+                            if (searchInput) {
+                                searchInput.focus();
+                            }
+                            break;
+                    }
+                }
+            });
+            
+            console.log('💡 Keyboard shortcuts:');
+            console.log('  Ctrl/Cmd + R: Refresh marketplace');
+            console.log('  Ctrl/Cmd + F: Focus search');
+        });
+    </script>
+</body>
+</html>

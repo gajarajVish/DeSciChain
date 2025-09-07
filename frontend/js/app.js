@@ -91,8 +91,25 @@ class DeSciChainApp {
             publishForm.addEventListener('submit', (e) => this.handlePublishSubmit(e));
         }
 
+        // Tab navigation with data loading
+        this.setupTabNavigation();
+
         // Wallet connection (will be handled by blockchain service)
         this.setupWalletUI();
+    }
+
+    setupTabNavigation() {
+        const tabLinks = document.querySelectorAll('[data-tab]');
+        tabLinks.forEach(link => {
+            link.addEventListener('click', async (e) => {
+                const tabId = link.getAttribute('data-tab');
+                
+                // Load data when switching to My Models tab
+                if (tabId === 'my-models') {
+                    await this.loadUserModels();
+                }
+            });
+        });
     }
 
     // UI Management
@@ -152,6 +169,174 @@ class DeSciChainApp {
         }
     }
 
+    async loadUserModels() {
+        if (!this.state.wallet.connected) {
+            console.log('👤 Wallet not connected, skipping user models load');
+            return;
+        }
+
+        try {
+            console.log('👤 Loading user models...');
+            const userAddress = this.state.wallet.address;
+            
+            // Load purchased models
+            console.log('🛒 Loading purchased models...');
+            const purchasesResponse = await this.apiService.getUserPurchases(userAddress);
+            if (purchasesResponse.success) {
+                this.state.models.purchased = purchasesResponse.data || [];
+                console.log(`✅ Loaded ${this.state.models.purchased.length} purchased models`);
+            }
+            
+            // Load published models
+            console.log('📝 Loading published models...');
+            const publishedResponse = await this.apiService.getUserModels(userAddress);
+            if (publishedResponse.success) {
+                this.state.models.published = publishedResponse.data || [];
+                console.log(`✅ Loaded ${this.state.models.published.length} published models`);
+            }
+            
+            // Re-render My Models tab if it's active
+            this.renderMyModels();
+            
+        } catch (error) {
+            console.error('❌ Failed to load user models:', error);
+            this.showError('Failed to load your models: ' + error.message);
+        }
+    }
+
+    renderMyModels() {
+        const publishedContainer = document.getElementById('published-models');
+        const purchasedContainer = document.getElementById('purchased-models');
+        
+        if (publishedContainer) {
+            if (this.state.models.published && this.state.models.published.length > 0) {
+                publishedContainer.innerHTML = this.state.models.published.map(model => this.createMyModelCard(model, 'published')).join('');
+            } else {
+                publishedContainer.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                        <i class="fas fa-plus-circle" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                        <h3>No Published Models</h3>
+                        <p style="color: var(--text-muted);">You haven't published any models yet.</p>
+                        <button class="btn btn-primary mt-4" onclick="document.querySelector('[data-tab=publish]').click()">
+                            <i class="fas fa-plus"></i> Publish Your First Model
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        if (purchasedContainer) {
+            if (this.state.models.purchased && this.state.models.purchased.length > 0) {
+                purchasedContainer.innerHTML = this.state.models.purchased.map(model => this.createMyModelCard(model, 'purchased')).join('');
+            } else {
+                purchasedContainer.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                        <i class="fas fa-shopping-cart" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                        <h3>No Purchased Models</h3>
+                        <p style="color: var(--text-muted);">You haven't purchased any models yet.</p>
+                        <button class="btn btn-primary mt-4" onclick="document.querySelector('[data-tab=marketplace]').click()">
+                            <i class="fas fa-search"></i> Browse Marketplace
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    createMyModelCard(model, type) {
+        const tags = Array.isArray(model.tags) ? model.tags : (model.tags ? model.tags.split(',') : []);
+        const isEncrypted = model.encrypted || model.encryptedHash;
+        const isPurchased = type === 'purchased';
+        
+        return `
+            <div class="model-card my-model-card" data-model-id="${model.id}">
+                <div class="model-header">
+                    <div>
+                        <h3 class="model-title">${this.escapeHtml(model.name)}</h3>
+                        <div class="model-author">
+                            <i class="fas fa-user"></i>
+                            <span>${this.escapeHtml(model.authorDisplayName || model.author || model.creator || 'Anonymous')}</span>
+                        </div>
+                    </div>
+                    <div class="model-price-section">
+                        <div class="model-price">
+                            ${model.priceAlgo || model.price || 0}
+                            <span class="model-price-unit">ALGO</span>
+                        </div>
+                        ${isPurchased ? `
+                            <div class="ownership-badge purchased">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Owned</span>
+                            </div>
+                        ` : `
+                            <div class="ownership-badge published">
+                                <i class="fas fa-upload"></i>
+                                <span>Published</span>
+                            </div>
+                        `}
+                    </div>
+                </div>
+                
+                <p class="model-description">${this.escapeHtml(model.description)}</p>
+                
+                ${isEncrypted ? `
+                    <div class="security-info">
+                        <i class="fas fa-lock"></i>
+                        <span>Military-grade AES-256-GCM encryption applied</span>
+                    </div>
+                ` : ''}
+                
+                <div class="model-meta">
+                    <div class="model-meta-item">
+                        <i class="fas fa-code"></i>
+                        <span>${model.framework || 'Unknown'}</span>
+                    </div>
+                    <div class="model-meta-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>${model.accuracy || 'N/A'}${typeof model.accuracy === 'number' ? '%' : ''}</span>
+                    </div>
+                    <div class="model-meta-item">
+                        <i class="fas fa-download"></i>
+                        <span>${model.downloads || 0}</span>
+                    </div>
+                    <div class="model-meta-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>${model.createdAt ? new Date(model.createdAt).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                </div>
+                
+                ${tags.length > 0 ? `
+                    <div class="model-tags">
+                        ${tags.map(tag => `<span class="tag">${this.escapeHtml(tag.trim())}</span>`).join('')}
+                        ${isEncrypted ? `<span class="tag encrypted-tag"><i class="fas fa-shield-alt"></i> Encrypted</span>` : ''}
+                    </div>
+                ` : isEncrypted ? `
+                    <div class="model-tags">
+                        <span class="tag encrypted-tag"><i class="fas fa-shield-alt"></i> Encrypted</span>
+                    </div>
+                ` : ''}
+                
+                <div class="model-actions">
+                    ${isPurchased ? `
+                        <button class="btn btn-primary" onclick="app.downloadModel('${model.id}')">
+                            <i class="fas fa-download"></i>
+                            Download
+                        </button>
+                    ` : `
+                        <button class="btn btn-secondary" onclick="app.editModel('${model.id}')" disabled>
+                            <i class="fas fa-edit"></i>
+                            Edit
+                        </button>
+                    `}
+                    <button class="btn btn-outline" onclick="app.viewModelDetails('${model.id}')">
+                        <i class="fas fa-info-circle"></i>
+                        Details
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
     // Model Rendering
     renderModels(models) {
         const container = document.getElementById('models-container');
@@ -182,7 +367,7 @@ class DeSciChainApp {
                         <h3 class="model-title">${this.escapeHtml(model.name)}</h3>
                         <div class="model-author">
                             <i class="fas fa-user"></i>
-                            <span>${this.escapeHtml(model.author || model.creator || 'Anonymous')}</span>
+                            <span>${this.escapeHtml(model.authorDisplayName || model.author || model.creator || 'Anonymous')}</span>
                         </div>
                     </div>
                     <div class="model-price-section">
@@ -829,6 +1014,272 @@ class DeSciChainApp {
             console.error('❌ Failed to copy address:', error);
             this.showError('Failed to copy address. Please copy manually.');
         }
+    }
+
+    // Model Actions
+    async viewModelDetails(modelId) {
+        try {
+            console.log('🔍 Viewing details for model:', modelId);
+            
+            // Find the model in our current data
+            const model = this.state.models.all.find(m => m.id === modelId);
+            
+            if (!model) {
+                console.error('Model not found:', modelId);
+                return;
+            }
+            
+            // Create and show modal
+            this.showModelModal(model);
+            
+        } catch (error) {
+            console.error('❌ Error showing model details:', error);
+            this.showError('Failed to load model details');
+        }
+    }
+
+    showModelModal(model) {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('model-details-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        const tags = Array.isArray(model.tags) ? model.tags : (model.tags ? model.tags.split(',') : []);
+        const isEncrypted = model.encrypted || model.encryptedHash;
+        const createdDate = model.createdAt ? new Date(model.createdAt).toLocaleDateString() : 'Unknown';
+        
+        const modalHtml = `
+            <div id="model-details-modal" class="modal-overlay" onclick="this.remove()">
+                <div class="modal-content" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h2>${this.escapeHtml(model.name)}</h2>
+                        <button class="modal-close" onclick="document.getElementById('model-details-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <div class="model-details-grid">
+                            <div class="detail-section">
+                                <h3><i class="fas fa-info-circle"></i> Basic Information</h3>
+                                <div class="detail-item">
+                                    <label>Author:</label>
+                                    <span>${this.escapeHtml(model.authorDisplayName || model.author || model.creator || 'Anonymous')}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Price:</label>
+                                    <span>${model.priceAlgo || model.price || 0} ALGO</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Framework:</label>
+                                    <span>${this.escapeHtml(model.framework || 'Unknown')}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Category:</label>
+                                    <span>${this.escapeHtml(model.category || 'Other')}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Version:</label>
+                                    <span>${this.escapeHtml(model.version || 'N/A')}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Created:</label>
+                                    <span>${createdDate}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h3><i class="fas fa-chart-bar"></i> Statistics</h3>
+                                <div class="detail-item">
+                                    <label>Accuracy:</label>
+                                    <span>${model.accuracy || 'N/A'}${typeof model.accuracy === 'number' ? '%' : ''}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Downloads:</label>
+                                    <span>${model.downloads || 0}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Rating:</label>
+                                    <span>${model.rating || 0} ⭐</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>File Size:</label>
+                                    <span>${model.fileSize ? this.formatFileSize(model.fileSize) : 'Unknown'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>License:</label>
+                                    <span>${this.escapeHtml(model.license || 'Not specified')}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h3><i class="fas fa-align-left"></i> Description</h3>
+                            <p class="model-full-description">${this.escapeHtml(model.description)}</p>
+                        </div>
+                        
+                        ${tags.length > 0 ? `
+                            <div class="detail-section">
+                                <h3><i class="fas fa-tags"></i> Tags</h3>
+                                <div class="model-tags">
+                                    ${tags.map(tag => `<span class="tag">${this.escapeHtml(tag.trim())}</span>`).join('')}
+                                    ${isEncrypted ? `<span class="tag encrypted-tag"><i class="fas fa-shield-alt"></i> Encrypted</span>` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${isEncrypted ? `
+                            <div class="detail-section security-section">
+                                <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                                <div class="security-info">
+                                    <i class="fas fa-lock"></i>
+                                    <div>
+                                        <strong>Military-grade AES-256-GCM encryption applied</strong>
+                                        <p>This model is protected with industry-standard encryption. Only purchasers can decrypt and access the model files.</p>
+                                        ${model.encryptedHash ? `<small>Hash: ${model.encryptedHash.substring(0, 16)}...</small>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${model.ipfsHash ? `
+                            <div class="detail-section">
+                                <h3><i class="fas fa-cloud"></i> Storage</h3>
+                                <div class="detail-item">
+                                    <label>IPFS Hash:</label>
+                                    <span class="monospace">${model.ipfsHash}</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" onclick="app.purchaseModel('${model.id}'); document.getElementById('model-details-modal').remove();">
+                            <i class="fas fa-shopping-cart"></i>
+                            Purchase for ${model.priceAlgo || model.price || 0} ALGO
+                        </button>
+                        <button class="btn btn-outline" onclick="document.getElementById('model-details-modal').remove()">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async purchaseModel(modelId) {
+        try {
+            console.log('💳 Purchasing model:', modelId);
+            
+            if (!this.state.wallet.connected) {
+                this.showError('Please connect your wallet first');
+                return;
+            }
+            
+            const model = this.state.models.all.find(m => m.id === modelId);
+            if (!model) {
+                this.showError('Model not found');
+                return;
+            }
+            
+            this.showLoading(true);
+            
+            // Make purchase request
+            const purchaseData = {
+                modelId: modelId,
+                buyerAddress: this.state.wallet.address,
+                price: model.priceAlgo || model.price || 0
+            };
+            
+            const response = await this.apiService.purchaseModel(purchaseData);
+            
+            if (response.success) {
+                this.showSuccess(`✅ Successfully purchased "${model.name}" for ${model.priceAlgo || model.price || 0} ALGO!`);
+                
+                // Refresh user's purchased models
+                await this.loadUserModels();
+            } else {
+                throw new Error(response.error || 'Purchase failed');
+            }
+            
+        } catch (error) {
+            console.error('❌ Purchase failed:', error);
+            this.showError('Purchase failed: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    async downloadModel(modelId) {
+        try {
+            console.log('⬇️ Downloading model:', modelId);
+            
+            if (!this.state.wallet.connected) {
+                this.showError('Please connect your wallet first');
+                return;
+            }
+            
+            const model = this.state.models.all.find(m => m.id === modelId) || 
+                          this.state.models.purchased.find(m => m.id === modelId);
+            
+            if (!model) {
+                this.showError('Model not found');
+                return;
+            }
+            
+            this.showLoading(true);
+            
+            // Make download request
+            const downloadData = {
+                modelId: modelId,
+                buyerAddress: this.state.wallet.address
+            };
+            
+            console.log('📡 Requesting download from API...');
+            const response = await this.apiService.downloadModel(downloadData);
+            
+            if (response.success && response.data instanceof Blob) {
+                // Create download link for the blob
+                const fileName = model.originalFilename || `${model.name.replace(/[^a-z0-9]/gi, '_')}.pth`;
+                console.log(`💾 Downloading file: ${fileName}`);
+                
+                const url = window.URL.createObjectURL(response.data);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                this.showSuccess(`✅ Successfully downloaded "${model.name}"!`);
+                
+            } else if (response.response && response.response.status === 403) {
+                this.showError('❌ Access denied. You must purchase this model first.');
+            } else {
+                throw new Error('Download failed - invalid response');
+            }
+            
+        } catch (error) {
+            console.error('❌ Download failed:', error);
+            if (error.message.includes('403') || error.message.includes('access denied')) {
+                this.showError('❌ Access denied. You must purchase this model first.');
+            } else if (error.message.includes('404') || error.message.includes('not found')) {
+                this.showError('❌ Model file not found.');
+            } else {
+                this.showError('Download failed: ' + error.message);
+            }
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    async editModel(modelId) {
+        // Placeholder for future edit functionality
+        this.showError('Model editing is not yet implemented');
     }
 
     // Utility Methods

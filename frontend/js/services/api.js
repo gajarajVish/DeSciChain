@@ -5,7 +5,7 @@
 
 class APIService {
     constructor() {
-        this.baseURL = '/api';
+        this.baseURL = 'http://localhost:3001/api';
         this.defaultHeaders = {
             'Content-Type': 'application/json'
         };
@@ -55,9 +55,9 @@ class APIService {
                 return { success: true, data: data };
             }
 
-            // For JSON object responses
+            // For JSON object responses  
             if (typeof data === 'object') {
-                return { success: true, data: data };
+                return data.success !== undefined ? data : { success: true, data: data };
             }
 
             // For non-JSON responses (like downloads), return the response
@@ -82,7 +82,10 @@ class APIService {
      * Get all published models
      */
     async getModels() {
-        return this.request('/models');
+        console.log('🌐 Making API request to:', `${this.baseURL}/models`);
+        const response = await this.request('/models');
+        console.log('📦 API response:', response);
+        return response;
     }
 
     /**
@@ -156,6 +159,27 @@ class APIService {
      */
     async getAccountInfo(address) {
         return this.request(`/blockchain/account/${address}`);
+    }
+
+    /**
+     * Get user's purchased models
+     */
+    async getUserPurchases(address) {
+        return this.request(`/models/purchases/${address}`);
+    }
+
+    /**
+     * Get user's published models
+     */
+    async getUserModels(address) {
+        return this.request(`/models/user/${address}`);
+    }
+
+    /**
+     * Resolve address to human-readable name
+     */
+    async resolveAddressToName(address) {
+        return this.request(`/names/resolve-address/${address}`);
     }
 
     // Utility Methods

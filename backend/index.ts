@@ -15,6 +15,7 @@ import { createConnection } from 'typeorm';
 // Import routes
 import modelsRouter from './routes/models.route';
 import blockchainRouter from './routes/blockchain.route';
+import nameRegistryRouter from './routes/nameRegistry.route';
 
 // Load environment variables
 config();
@@ -99,6 +100,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/models', modelsRouter);
 app.use('/api/blockchain', blockchainRouter);
+app.use('/api/names', nameRegistryRouter);
 
 // Enhanced error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

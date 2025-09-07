@@ -17,6 +17,7 @@ const dotenv_1 = require("dotenv");
 // Import routes
 const models_route_1 = __importDefault(require("./routes/models.route"));
 const blockchain_route_1 = __importDefault(require("./routes/blockchain.route"));
+const nameRegistry_route_1 = __importDefault(require("./routes/nameRegistry.route"));
 // Load environment variables
 (0, dotenv_1.config)();
 const app = (0, express_1.default)();
@@ -39,8 +40,42 @@ app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 // Compression middleware
 app.use((0, compression_1.default)());
-// Logging middleware
-app.use((0, morgan_1.default)('combined'));
+// Enhanced logging middleware
+app.use((0, morgan_1.default)((tokens, req, res) => {
+    return [
+        tokens.method(req, res),
+        tokens.url(req, res),
+        tokens.status(req, res),
+        tokens.res(req, res, 'content-length'), '-',
+        tokens['response-time'](req, res), 'ms',
+        tokens['user-agent'](req, res)
+    ].join(' ');
+}));
+// Request monitoring middleware
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        const logData = {
+            method: req.method,
+            url: req.url,
+            status: res.statusCode,
+            duration,
+            ip: req.ip,
+            userAgent: req.get('User-Agent'),
+            timestamp: new Date().toISOString()
+        };
+        // Log slow requests
+        if (duration > 5000) {
+            console.warn('Slow request detected:', logData);
+        }
+        // Log errors
+        if (res.statusCode >= 400) {
+            console.error('Request error:', logData);
+        }
+    });
+    next();
+});
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
@@ -53,12 +88,49 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/models', models_route_1.default);
 app.use('/api/blockchain', blockchain_route_1.default);
-// Error handling middleware
+app.use('/api/names', nameRegistry_route_1.default);
+// Enhanced error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err);
-    res.status(err.status || 500).json({
-        error: err.message || 'Internal Server Error',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    // Handle different types of errors
+    let statusCode = err.status || 500;
+    let errorMessage = err.message || 'Internal Server Error';
+    let errorType = 'InternalError';
+    // Wallet-related errors
+    if (err.message?.includes('wallet') || err.message?.includes('Wallet')) {
+        statusCode = 400;
+        errorType = 'WalletError';
+    }
+    // Blockchain-related errors
+    if (err.message?.includes('blockchain') || err.message?.includes('transaction') || err.message?.includes('Algorand')) {
+        statusCode = 400;
+        errorType = 'BlockchainError';
+    }
+    // Encryption-related errors
+    if (err.message?.includes('encryption') || err.message?.includes('decryption') || err.message?.includes('crypto')) {
+        statusCode = 400;
+        errorType = 'EncryptionError';
+    }
+    // IPFS-related errors
+    if (err.message?.includes('IPFS') || err.message?.includes('upload') || err.message?.includes('download')) {
+        statusCode = 400;
+        errorType = 'StorageError';
+    }
+    // Validation errors
+    if (err.message?.includes('validation') || err.message?.includes('required') || err.message?.includes('invalid')) {
+        statusCode = 400;
+        errorType = 'ValidationError';
+    }
+    res.status(statusCode).json({
+        error: {
+            type: errorType,
+            message: errorMessage,
+            timestamp: new Date().toISOString(),
+            ...(process.env.NODE_ENV === 'development' && {
+                stack: err.stack,
+                details: err.details
+            })
+        }
     });
 });
 // 404 handler

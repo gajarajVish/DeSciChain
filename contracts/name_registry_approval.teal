@@ -1,0 +1,398 @@
+#pragma version 8
+txn ApplicationID
+int 0
+==
+bnz main_l27
+txn OnCompletion
+int NoOp
+==
+txna ApplicationArgs 0
+byte "register"
+==
+&&
+bnz main_l26
+txn OnCompletion
+int NoOp
+==
+txna ApplicationArgs 0
+byte "resolve"
+==
+&&
+bnz main_l25
+txn OnCompletion
+int NoOp
+==
+txna ApplicationArgs 0
+byte "update"
+==
+&&
+bnz main_l24
+txn OnCompletion
+int NoOp
+==
+txna ApplicationArgs 0
+byte "transfer"
+==
+&&
+bnz main_l23
+txn OnCompletion
+int NoOp
+==
+txna ApplicationArgs 0
+byte "delete"
+==
+&&
+bnz main_l22
+txn OnCompletion
+int NoOp
+==
+txna ApplicationArgs 0
+byte "exists"
+==
+&&
+bnz main_l18
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l17
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l16
+txn OnCompletion
+int OptIn
+==
+bnz main_l15
+txn OnCompletion
+int CloseOut
+==
+bnz main_l14
+int 1
+bnz main_l13
+err
+main_l13:
+int 0
+return
+main_l14:
+int 1
+return
+main_l15:
+int 1
+return
+main_l16:
+txn Sender
+global CreatorAddress
+==
+return
+main_l17:
+txn Sender
+global CreatorAddress
+==
+return
+main_l18:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 1
+len
+int 0
+>
+txna ApplicationArgs 1
+len
+int 64
+<=
+&&
+assert
+byte "EXISTS:"
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+int 0
+!=
+bnz main_l21
+byte "0"
+main_l20:
+concat
+log
+int 1
+return
+main_l21:
+byte "1"
+b main_l20
+main_l22:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 1
+len
+int 0
+>
+txna ApplicationArgs 1
+len
+int 64
+<=
+&&
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+int 0
+!=
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+txn Sender
+==
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_del
+byte "cid_"
+txna ApplicationArgs 1
+concat
+app_global_del
+byte "price_"
+txna ApplicationArgs 1
+concat
+app_global_del
+byte "ts_"
+txna ApplicationArgs 1
+concat
+app_global_del
+byte "DELETED:"
+txna ApplicationArgs 1
+concat
+log
+int 1
+return
+main_l23:
+txn NumAppArgs
+int 3
+==
+assert
+txna ApplicationArgs 1
+len
+int 0
+>
+txna ApplicationArgs 1
+len
+int 64
+<=
+&&
+assert
+txna ApplicationArgs 2
+len
+int 32
+==
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+int 0
+!=
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+txn Sender
+==
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+txna ApplicationArgs 2
+app_global_put
+byte "ts_"
+txna ApplicationArgs 1
+concat
+global LatestTimestamp
+app_global_put
+byte "TRANSFERRED:"
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+txna ApplicationArgs 2
+concat
+log
+int 1
+return
+main_l24:
+txn NumAppArgs
+int 4
+==
+assert
+txna ApplicationArgs 1
+len
+int 0
+>
+txna ApplicationArgs 1
+len
+int 64
+<=
+&&
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+int 0
+!=
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+txn Sender
+==
+assert
+byte "cid_"
+txna ApplicationArgs 1
+concat
+txna ApplicationArgs 2
+app_global_put
+byte "price_"
+txna ApplicationArgs 1
+concat
+txna ApplicationArgs 3
+btoi
+app_global_put
+byte "ts_"
+txna ApplicationArgs 1
+concat
+global LatestTimestamp
+app_global_put
+byte "UPDATED:"
+txna ApplicationArgs 1
+concat
+log
+int 1
+return
+main_l25:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 1
+len
+int 0
+>
+txna ApplicationArgs 1
+len
+int 64
+<=
+&&
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+int 0
+!=
+assert
+byte "OWNER:"
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+concat
+log
+byte "CID:"
+byte "cid_"
+txna ApplicationArgs 1
+concat
+app_global_get
+concat
+log
+byte "PRICE:"
+byte "price_"
+txna ApplicationArgs 1
+concat
+app_global_get
+itob
+concat
+log
+byte "TIMESTAMP:"
+byte "ts_"
+txna ApplicationArgs 1
+concat
+app_global_get
+itob
+concat
+log
+int 1
+return
+main_l26:
+txn NumAppArgs
+int 4
+==
+assert
+txna ApplicationArgs 1
+len
+int 0
+>
+txna ApplicationArgs 1
+len
+int 64
+<=
+&&
+assert
+txna ApplicationArgs 2
+len
+int 0
+>
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+app_global_get
+int 0
+==
+assert
+byte "owner_"
+txna ApplicationArgs 1
+concat
+txn Sender
+app_global_put
+byte "cid_"
+txna ApplicationArgs 1
+concat
+txna ApplicationArgs 2
+app_global_put
+byte "price_"
+txna ApplicationArgs 1
+concat
+txna ApplicationArgs 3
+btoi
+app_global_put
+byte "ts_"
+txna ApplicationArgs 1
+concat
+global LatestTimestamp
+app_global_put
+byte "REGISTERED:"
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+txn Sender
+concat
+log
+int 1
+return
+main_l27:
+int 1
+return

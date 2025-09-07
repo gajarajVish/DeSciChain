@@ -1,0 +1,115 @@
+{
+  "name": "NameRegistry",
+  "description": "DeSci Name Registry for human-readable names on Algorand",
+  "methods": [
+    {
+      "name": "register",
+      "args": [
+        {
+          "type": "string",
+          "name": "name",
+          "desc": "The name to register (e.g., smith.desci)"
+        },
+        {
+          "type": "string",
+          "name": "cid",
+          "desc": "IPFS CID for the associated content"
+        },
+        {
+          "type": "string",
+          "name": "price",
+          "desc": "Price in microAlgos as string"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Name registered successfully"
+      }
+    },
+    {
+      "name": "resolve",
+      "args": [
+        {
+          "type": "string",
+          "name": "name",
+          "desc": "The name to resolve"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Name data returned via logs"
+      }
+    },
+    {
+      "name": "update",
+      "args": [
+        {
+          "type": "string",
+          "name": "name",
+          "desc": "The name to update"
+        },
+        {
+          "type": "string",
+          "name": "cid",
+          "desc": "New IPFS CID"
+        },
+        {
+          "type": "string",
+          "name": "price",
+          "desc": "New price in microAlgos as string"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Name updated successfully"
+      }
+    },
+    {
+      "name": "transfer",
+      "args": [
+        {
+          "type": "string",
+          "name": "name",
+          "desc": "The name to transfer"
+        },
+        {
+          "type": "address",
+          "name": "new_owner",
+          "desc": "New owner address"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Name transferred successfully"
+      }
+    },
+    {
+      "name": "delete",
+      "args": [
+        {
+          "type": "string",
+          "name": "name",
+          "desc": "The name to delete"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Name deleted successfully"
+      }
+    },
+    {
+      "name": "exists",
+      "args": [
+        {
+          "type": "string",
+          "name": "name",
+          "desc": "The name to check"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "desc": "Existence status returned via logs"
+      }
+    }
+  ]
+}

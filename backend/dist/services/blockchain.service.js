@@ -1,61 +1,176 @@
 "use strict";
 /**
- * Blockchain Service for DeSciChain
- * Handles Algorand blockchain interactions
+ * Secure Blockchain Service for DeSciChain
+ * Builds unsigned transactions for wallet signing - NO private keys handled server-side
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BlockchainService = void 0;
 const algosdk_1 = require("algosdk");
-const algokit_utils_1 = require("@algorandfoundation/algokit-utils");
 class BlockchainService {
     constructor(config) {
         this.config = config;
         this.algodClient = new algosdk_1.Algodv2(config.algodToken, config.algodServer);
         this.indexerClient = new algosdk_1.Indexer(config.indexerToken, config.indexerServer);
-        // Initialize contract clients
-        this.modelRegistryClient = new algokit_utils_1.ApplicationClient({ resolveBy: 'id', id: config.modelRegistryAppId }, this.algodClient);
-        this.escrowClient = new algokit_utils_1.ApplicationClient({ resolveBy: 'id', id: config.escrowAppId }, this.algodClient);
     }
     /**
-     * Register a model on the blockchain
+     * Build unsigned transaction for model registration
+     * Returns transaction for wallet to sign
      */
-    async registerModel(cid, publisher, licenseTerms, publisherPrivateKey) {
+    async buildModelRegistrationTransaction(publisherAddress, cid, licenseTerms) {
         try {
-            // Convert CID to integer (simplified - in production, use proper CID encoding)
-            const cidInt = this.cidToInt(cid);
-            // Call the publish function
-            const result = await this.modelRegistryClient.call({
-                method: 'publish',
-                methodArgs: [cidInt, licenseTerms],
-                sender: { signer: publisherPrivateKey }
+            const params = await this.algodClient.getTransactionParams().do();
+            const transaction = (0, algosdk_1.makeApplicationCallTxnFromObject)({
+                from: publisherAddress,
+                suggestedParams: params,
+                appIndex: this.config.modelRegistryAppId,
+                onComplete: algosdk_1.OnApplicationComplete.NoOpOC,
+                appArgs: [
+                    new TextEncoder().encode('publish_model'),
+                    new TextEncoder().encode(cid),
+                    new TextEncoder().encode(publisherAddress),
+                    new TextEncoder().encode(licenseTerms)
+                ]
             });
-            const modelId = parseInt(result.return?.valueOf());
-            const txnId = result.txId;
             return {
-                cid,
-                publisher,
-                licenseTerms,
-                modelId,
-                txnId
+                transaction,
+                description: `Register ML model with CID: ${cid}`
             };
         }
         catch (error) {
-            throw new Error(`Failed to register model: ${error.message}`);
+            throw new Error(`Failed to build model registration transaction: ${error.message}`);
         }
     }
     /**
-     * Get model information from blockchain
+     * Build unsigned transaction group for model purchase
+     * Returns payment + escrow creation transactions for wallet to sign
      */
-    async getModel(modelId) {
+    async buildModelPurchaseTransactions(buyerAddress, modelId, publisherAddress, priceInMicroAlgos) {
         try {
-            const result = await this.modelRegistryClient.call({
-                method: 'get',
-                methodArgs: [modelId]
+            const params = await this.algodClient.getTransactionParams().do();
+            const escrowAppAddress = (0, algosdk_1.getApplicationAddress)(this.config.escrowAppId);
+            // Payment transaction to escrow contract
+            const paymentTxn = (0, algosdk_1.makePaymentTxnWithSuggestedParams)(buyerAddress, escrowAppAddress, priceInMicroAlgos, undefined, new TextEncoder().encode(`Purchase model ${modelId}`), params);
+            // Escrow creation application call
+            const escrowTxn = (0, algosdk_1.makeApplicationCallTxnFromObject)({
+                from: buyerAddress,
+                suggestedParams: params,
+                appIndex: this.config.escrowAppId,
+                onComplete: algosdk_1.OnApplicationComplete.NoOpOC,
+                appArgs: [
+                    new TextEncoder().encode('create_escrow'),
+                    (0, algosdk_1.encodeUint64)(modelId),
+                    new TextEncoder().encode(publisherAddress),
+                    (0, algosdk_1.encodeUint64)(priceInMicroAlgos)
+                ]
             });
-            // Parse the logs to extract model data
-            const logs = result.logs || [];
-            const modelData = this.parseModelLogs(logs);
-            return modelData;
+            // Group transactions
+            const transactions = [paymentTxn, escrowTxn];
+            (0, algosdk_1.assignGroupID)(transactions);
+            return {
+                transactions,
+                descriptions: [
+                    `Payment of ${priceInMicroAlgos / 1000000} ALGO for model ${modelId}`,
+                    `Create escrow for model ${modelId} purchase`
+                ]
+            };
+        }
+        catch (error) {
+            throw new Error(`Failed to build purchase transactions: ${error.message}`);
+        }
+    }
+    /**
+     * Build unsigned transaction for payment release
+     */
+    async buildPaymentReleaseTransaction(publisherAddress, escrowId) {
+        try {
+            const params = await this.algodClient.getTransactionParams().do();
+            const transaction = (0, algosdk_1.makeApplicationCallTxnFromObject)({
+                from: publisherAddress,
+                suggestedParams: params,
+                appIndex: this.config.escrowAppId,
+                onComplete: algosdk_1.OnApplicationComplete.NoOpOC,
+                appArgs: [
+                    new TextEncoder().encode('release_payment'),
+                    (0, algosdk_1.encodeUint64)(escrowId)
+                ]
+            });
+            return {
+                transaction,
+                description: `Release payment for escrow ${escrowId}`
+            };
+        }
+        catch (error) {
+            throw new Error(`Failed to build payment release transaction: ${error.message}`);
+        }
+    }
+    /**
+     * Build unsigned transaction for payment refund
+     */
+    async buildPaymentRefundTransaction(buyerAddress, escrowId) {
+        try {
+            const params = await this.algodClient.getTransactionParams().do();
+            const transaction = (0, algosdk_1.makeApplicationCallTxnFromObject)({
+                from: buyerAddress,
+                suggestedParams: params,
+                appIndex: this.config.escrowAppId,
+                onComplete: algosdk_1.OnApplicationComplete.NoOpOC,
+                appArgs: [
+                    new TextEncoder().encode('refund_payment'),
+                    (0, algosdk_1.encodeUint64)(escrowId)
+                ]
+            });
+            return {
+                transaction,
+                description: `Refund payment for escrow ${escrowId}`
+            };
+        }
+        catch (error) {
+            throw new Error(`Failed to build payment refund transaction: ${error.message}`);
+        }
+    }
+    /**
+     * Submit signed transaction to the network
+     */
+    async submitSignedTransaction(signedTransaction) {
+        try {
+            const result = await this.algodClient.sendRawTransaction(signedTransaction).do();
+            return result.txId;
+        }
+        catch (error) {
+            throw new Error(`Failed to submit transaction: ${error.message}`);
+        }
+    }
+    /**
+     * Submit signed transaction group to the network
+     */
+    async submitSignedTransactionGroup(signedTransactions) {
+        try {
+            const result = await this.algodClient.sendRawTransaction(signedTransactions).do();
+            return result.txId;
+        }
+        catch (error) {
+            throw new Error(`Failed to submit transaction group: ${error.message}`);
+        }
+    }
+    /**
+     * Get model information by calling the smart contract
+     */
+    async getModel(modelId, callerAddress) {
+        try {
+            const params = await this.algodClient.getTransactionParams().do();
+            const transaction = (0, algosdk_1.makeApplicationCallTxnFromObject)({
+                from: callerAddress,
+                suggestedParams: params,
+                appIndex: this.config.modelRegistryAppId,
+                onComplete: algosdk_1.OnApplicationComplete.NoOpOC,
+                appArgs: [
+                    new TextEncoder().encode('get_model'),
+                    (0, algosdk_1.encodeUint64)(modelId)
+                ]
+            });
+            // This would need to be signed and submitted, then logs parsed
+            // For now, we'll use the indexer to get historical data
+            return this.getModelFromIndexer(modelId);
         }
         catch (error) {
             console.error(`Failed to get model ${modelId}:`, error);
@@ -63,108 +178,77 @@ class BlockchainService {
         }
     }
     /**
-     * Create escrow for model purchase
+     * Get model information from indexer (read-only)
      */
-    async createEscrow(modelId, buyer, price, buyerPrivateKey) {
+    async getModelFromIndexer(modelId) {
         try {
-            const result = await this.escrowClient.call({
-                method: 'create',
-                methodArgs: [modelId, buyer, price],
-                sender: { signer: buyerPrivateKey }
-            });
-            const txnId = result.txId;
-            return {
-                modelId,
-                buyer,
-                price,
-                txnId
-            };
-        }
-        catch (error) {
-            throw new Error(`Failed to create escrow: ${error.message}`);
-        }
-    }
-    /**
-     * Release payment from escrow
-     */
-    async releasePayment(modelId, publisherPrivateKey) {
-        try {
-            const result = await this.escrowClient.call({
-                method: 'release',
-                methodArgs: [modelId],
-                sender: { signer: publisherPrivateKey }
-            });
-            return result.txId;
-        }
-        catch (error) {
-            throw new Error(`Failed to release payment: ${error.message}`);
-        }
-    }
-    /**
-     * Refund payment from escrow
-     */
-    async refundPayment(modelId, buyerPrivateKey) {
-        try {
-            const result = await this.escrowClient.call({
-                method: 'refund',
-                methodArgs: [modelId],
-                sender: { signer: buyerPrivateKey }
-            });
-            return result.txId;
-        }
-        catch (error) {
-            throw new Error(`Failed to refund payment: ${error.message}`);
-        }
-    }
-    /**
-     * Check transaction status
-     */
-    async checkTransactionStatus(txnId) {
-        try {
-            const txnInfo = await this.algodClient.pendingTransactionInformation(txnId).do();
-            if (txnInfo['confirmed-round']) {
-                return {
-                    confirmed: true,
-                    txnId,
-                    block: txnInfo['confirmed-round']
-                };
+            // Query indexer for application transactions
+            const txnQuery = await this.indexerClient
+                .searchForTransactions()
+                .applicationID(this.config.modelRegistryAppId)
+                .txType('appl')
+                .limit(1000)
+                .do();
+            // Find the transaction that published this model
+            for (const txn of txnQuery.transactions) {
+                if (txn.logs) {
+                    const modelData = this.parseModelLogs(txn.logs);
+                    if (modelData && modelData.id === modelId) {
+                        return modelData;
+                    }
+                }
             }
-            else {
-                return {
-                    confirmed: false,
-                    txnId
-                };
-            }
+            return null;
         }
         catch (error) {
-            return {
-                confirmed: false,
-                txnId,
-                error: error.message
-            };
+            console.error(`Failed to get model from indexer:`, error);
+            return null;
         }
     }
     /**
-     * Get account balance
+     * Get escrow status by calling the smart contract
      */
-    async getAccountBalance(address) {
+    async getEscrowStatus(escrowId, callerAddress) {
         try {
-            const accountInfo = await this.algodClient.accountInformation(address).do();
-            return accountInfo.amount;
+            const params = await this.algodClient.getTransactionParams().do();
+            const transaction = (0, algosdk_1.makeApplicationCallTxnFromObject)({
+                from: callerAddress,
+                suggestedParams: params,
+                appIndex: this.config.escrowAppId,
+                onComplete: algosdk_1.OnApplicationComplete.NoOpOC,
+                appArgs: [
+                    new TextEncoder().encode('get_escrow_status'),
+                    (0, algosdk_1.encodeUint64)(escrowId)
+                ]
+            });
+            // This would need to be signed and submitted, then logs parsed
+            // For now, we'll return a placeholder
+            return { escrowId, status: 'pending' };
         }
         catch (error) {
-            throw new Error(`Failed to get account balance: ${error.message}`);
+            console.error(`Failed to get escrow status:`, error);
+            return null;
         }
     }
     /**
-     * Wait for transaction confirmation
+     * Wait for transaction confirmation with detailed status
      */
-    async waitForConfirmation(txnId, timeout = 10000) {
+    async waitForConfirmation(txnId, timeout = 20000) {
         const startTime = Date.now();
         while (Date.now() - startTime < timeout) {
-            const status = await this.checkTransactionStatus(txnId);
-            if (status.confirmed) {
-                return status;
+            try {
+                const txnInfo = await this.algodClient.pendingTransactionInformation(txnId).do();
+                if (txnInfo['confirmed-round']) {
+                    return {
+                        confirmed: true,
+                        txnId,
+                        block: txnInfo['confirmed-round'],
+                        logs: this.decodeLogs(txnInfo.logs || [])
+                    };
+                }
+            }
+            catch (error) {
+                // Transaction might not be found yet, continue waiting
             }
             // Wait 1 second before checking again
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -176,50 +260,100 @@ class BlockchainService {
         };
     }
     /**
-     * Convert CID to integer (simplified implementation)
+     * Check if transaction is confirmed (quick check)
      */
-    cidToInt(cid) {
-        // In production, use proper CID encoding/decoding
-        // This is a simplified version for demonstration
-        let hash = 0;
-        for (let i = 0; i < cid.length; i++) {
-            const char = cid.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32-bit integer
+    async isTransactionConfirmed(txnId) {
+        try {
+            const txnInfo = await this.algodClient.pendingTransactionInformation(txnId).do();
+            return !!txnInfo['confirmed-round'];
         }
-        return Math.abs(hash);
+        catch (error) {
+            return false;
+        }
+    }
+    /**
+     * Get account balance
+     */
+    async getAccountBalance(address) {
+        try {
+            const accountInfo = await this.algodClient.accountInformation(address).do();
+            return {
+                balance: accountInfo.amount,
+                minBalance: accountInfo['min-balance']
+            };
+        }
+        catch (error) {
+            throw new Error(`Failed to get account balance: ${error.message}`);
+        }
+    }
+    /**
+     * Get network status
+     */
+    async getNetworkStatus() {
+        try {
+            return await this.algodClient.status().do();
+        }
+        catch (error) {
+            throw new Error(`Failed to get network status: ${error.message}`);
+        }
+    }
+    /**
+     * Get suggested transaction parameters
+     */
+    async getSuggestedParams() {
+        try {
+            return await this.algodClient.getTransactionParams().do();
+        }
+        catch (error) {
+            throw new Error(`Failed to get suggested params: ${error.message}`);
+        }
+    }
+    /**
+     * Decode logs from base64
+     */
+    decodeLogs(logs) {
+        return logs.map(log => {
+            try {
+                return new TextDecoder().decode(Buffer.from(log, 'base64'));
+            }
+            catch (error) {
+                return log;
+            }
+        });
     }
     /**
      * Parse model logs to extract model data
      */
     parseModelLogs(logs) {
         try {
-            const logStrings = logs.map(log => new TextDecoder().decode(log));
+            const decodedLogs = this.decodeLogs(logs);
+            let id = 0;
             let cid = '';
             let publisher = '';
             let licenseTerms = '';
-            let modelId = 0;
-            for (const log of logStrings) {
-                if (log.startsWith('ModelID:')) {
-                    modelId = parseInt(log.split('ModelID:')[1]);
+            let timestamp = 0;
+            for (const log of decodedLogs) {
+                if (log.startsWith('MODEL_PUBLISHED:')) {
+                    const parts = log.split(':');
+                    if (parts.length >= 2) {
+                        id = parseInt(parts[1]);
+                    }
                 }
                 else if (log.startsWith('CID:')) {
-                    cid = log.split('CID:')[1];
+                    cid = log.substring(4);
                 }
-                else if (log.startsWith('Publisher:')) {
-                    publisher = log.split('Publisher:')[1];
+                else if (log.startsWith('PUBLISHER:')) {
+                    publisher = log.substring(10);
                 }
-                else if (log.startsWith('License:')) {
-                    licenseTerms = log.split('License:')[1];
+                else if (log.startsWith('LICENSE:')) {
+                    licenseTerms = log.substring(8);
+                }
+                else if (log.startsWith('TIMESTAMP:')) {
+                    timestamp = parseInt(log.substring(10));
                 }
             }
-            if (modelId && cid && publisher && licenseTerms) {
-                return {
-                    cid,
-                    publisher,
-                    licenseTerms,
-                    modelId
-                };
+            if (id && cid && publisher && licenseTerms) {
+                return { id, cid, publisher, licenseTerms, timestamp };
             }
             return null;
         }
@@ -228,6 +362,37 @@ class BlockchainService {
             return null;
         }
     }
+    /**
+     * Validate Algorand address
+     */
+    isValidAddress(address) {
+        try {
+            // Basic validation - in production use algosdk.isValidAddress
+            return address.length === 58 && /^[A-Z2-7]+$/.test(address);
+        }
+        catch (error) {
+            return false;
+        }
+    }
+    /**
+     * Get application address for a given app ID
+     */
+    getApplicationAddress(appId) {
+        return (0, algosdk_1.getApplicationAddress)(appId);
+    }
+    /**
+     * Convert ALGO to microAlgos
+     */
+    algoToMicroAlgos(algo) {
+        return Math.round(algo * 1000000);
+    }
+    /**
+     * Convert microAlgos to ALGO
+     */
+    microAlgosToAlgo(microAlgos) {
+        return microAlgos / 1000000;
+    }
 }
 exports.BlockchainService = BlockchainService;
+exports.default = BlockchainService;
 //# sourceMappingURL=blockchain.service.js.map
