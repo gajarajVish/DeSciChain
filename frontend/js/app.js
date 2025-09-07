@@ -714,37 +714,7 @@ class DeSciFiApp {
     }
 
     // Model Actions
-    async purchaseModel(modelId) {
-        try {
-            if (!this.state.wallet.connected) {
-                this.showError('Please connect your wallet first');
-                return;
-            }
-            
-            console.log('💳 Purchasing model:', modelId);
-            this.showLoading(true);
-            
-            const purchaseData = {
-                modelId,
-                buyerAddress: this.state.wallet.address
-            };
-            
-            const response = await this.apiService.purchaseModel(purchaseData);
-            
-            if (response.success) {
-                this.showSuccess('Model purchased successfully!');
-                // You might want to refresh the user's purchased models here
-            } else {
-                throw new Error(response.message || 'Purchase failed');
-            }
-            
-        } catch (error) {
-            console.error('❌ Purchase failed:', error);
-            this.showError('Purchase failed: ' + error.message);
-        } finally {
-            this.showLoading(false);
-        }
-    }
+    // NOTE: The real purchaseModel method with ALGO transactions is implemented below around line 1203
 
     async viewModelDetails(modelId) {
         try {
@@ -776,7 +746,7 @@ class DeSciFiApp {
                             <span class="wallet-name">${walletName}</span>
                         </div>
                         <div class="wallet-details">
-                            <span class="wallet-address">${this.state.wallet.address.substring(0, 8)}...${this.state.wallet.address.substring(-6)}</span>
+                            <span class="wallet-address">${this.state.wallet.address.substring(0, 8)}...${this.state.wallet.address.slice(-6)}</span>
                             <span class="wallet-balance">${balance.toFixed(3)} ALGO</span>
                         </div>
                     </div>
@@ -1215,31 +1185,96 @@ class DeSciFiApp {
                 return;
             }
             
-            this.showLoading(true);
+            const price = parseFloat(model.priceAlgo || model.price || 0);
+            if (price <= 0) {
+                this.showError('Invalid model price');
+                return;
+            }
             
-            // Make purchase request
+            // Check if user has sufficient balance
+            const balance = this.blockchainService.getBalance();
+            if (balance < price) {
+                this.showError(`Insufficient balance. You have ${balance.toFixed(3)} ALGO but need ${price} ALGO`);
+                return;
+            }
+            
+            this.showLoadingWithMessage(`🔐 Creating payment transaction for ${price} ALGO...`);
+            
+            // Create payment transaction
+            // For now, we'll send payment to a temporary address (in production, this would be an escrow contract)
+            const sellerAddress = model.publisherAddress || 'SELLER_ADDRESS_PLACEHOLDER';
+            const buyerAddress = this.state.wallet.address;
+            
+            console.log(`💰 Creating payment: ${price} ALGO from ${buyerAddress} to ${sellerAddress}`);
+            
+            // Create the payment transaction
+            const paymentTxn = await this.blockchainService.createPaymentTransaction(
+                buyerAddress,
+                sellerAddress,
+                price,
+                `Purchase of ML model: ${model.name} (ID: ${modelId})`
+            );
+            
+            this.showLoadingWithMessage('✍️ Please sign the transaction in your wallet...');
+            
+            // Sign and submit the transaction
+            const result = await this.blockchainService.signAndSubmitTransaction(paymentTxn);
+            
+            this.showLoadingWithMessage('📤 Recording purchase on backend...');
+            
+            // Record the purchase in the backend with transaction ID
             const purchaseData = {
                 modelId: modelId,
-                buyerAddress: this.state.wallet.address,
-                price: model.priceAlgo || model.price || 0
+                buyerAddress: buyerAddress,
+                price: price,
+                transactionId: result.txId,
+                blockchainConfirmed: true
             };
             
             const response = await this.apiService.purchaseModel(purchaseData);
             
             if (response.success) {
-                this.showSuccess(`✅ Successfully purchased "${model.name}" for ${model.priceAlgo || model.price || 0} ALGO!`);
+                this.showSuccess(`✅ Successfully purchased "${model.name}" for ${price} ALGO!\n🔗 Transaction ID: ${result.txId}`);
                 
-                // Refresh user's purchased models
+                // Refresh user's purchased models and balance
                 await this.loadUserModels();
+                await this.updateWalletBalance();
             } else {
-                throw new Error(response.error || 'Purchase failed');
+                // Transaction was successful but backend recording failed
+                this.showError(`⚠️ Payment successful (${result.txId}) but failed to record purchase. Please contact support.`);
             }
             
         } catch (error) {
             console.error('❌ Purchase failed:', error);
-            this.showError('Purchase failed: ' + error.message);
+            
+            if (error.message.includes('User rejected')) {
+                this.showError('❌ Transaction cancelled by user');
+            } else if (error.message.includes('insufficient')) {
+                this.showError('❌ Insufficient balance for transaction');
+            } else {
+                this.showError(`❌ Purchase failed: ${error.message}`);
+            }
         } finally {
             this.showLoading(false);
+            // Close modal if it exists
+            const modal = document.getElementById('model-details-modal');
+            if (modal) modal.remove();
+        }
+    }
+
+    async updateWalletBalance() {
+        if (this.state.wallet.connected && this.state.wallet.address) {
+            try {
+                // Use the blockchain service's updateAccountBalance method which fetches fresh data
+                await this.blockchainService.updateAccountBalance();
+                
+                // Update the UI to reflect the new balance
+                this.setupWalletUI();
+                
+                console.log('💰 Wallet balance updated:', this.blockchainService.getBalance(), 'ALGO');
+            } catch (error) {
+                console.error('❌ Failed to update balance:', error);
+            }
         }
     }
 
@@ -1335,6 +1370,217 @@ class DeSciFiApp {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    /**
+     * Purchase a model with ALGO
+     */
+    async purchaseModel(modelId, price, sellerAddress) {
+        try {
+            console.log(`💰 Initiating purchase of model ${modelId}...`);
+            
+            if (!this.state.wallet.connected) {
+                this.showError('Please connect your wallet first');
+                return;
+            }
+
+            if (!this.blockchainService) {
+                this.showError('Blockchain service not available');
+                return;
+            }
+
+            const model = this.state.models.all.find(m => m.id === modelId);
+            if (!model) {
+                this.showError('Model not found');
+                return;
+            }
+
+            // Show confirmation dialog
+            const confirmed = await this.showPurchaseConfirmation(model, price);
+            if (!confirmed) {
+                console.log('❌ Purchase cancelled by user');
+                return;
+            }
+
+            this.showLoadingWithMessage(`💰 Purchasing "${model.name}" for ${price} ALGO...`);
+            
+            // Execute blockchain transaction
+            const transaction = await this.blockchainService.buyModel(modelId, price, sellerAddress);
+            
+            console.log('✅ Purchase successful:', transaction);
+            
+            // Update local state - add to purchased models
+            if (!this.state.models.purchased.find(m => m.id === modelId)) {
+                this.state.models.purchased.push({
+                    ...model,
+                    purchaseTransaction: transaction.txId,
+                    purchaseDate: new Date().toISOString(),
+                    purchasePrice: price
+                });
+            }
+            
+            // Show success message
+            this.showSuccess(`🎉 Successfully purchased "${model.name}"! Transaction ID: ${transaction.txId.substring(0, 12)}...`);
+            
+            // Refresh UI
+            this.updateWalletUI();
+            
+            return transaction;
+            
+        } catch (error) {
+            console.error('❌ Model purchase failed:', error);
+            this.showError(`Purchase failed: ${error.message}`);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    /**
+     * Show purchase confirmation dialog
+     */
+    async showPurchaseConfirmation(model, price) {
+        return new Promise((resolve) => {
+            // Create confirmation modal
+            const modal = document.createElement('div');
+            modal.className = 'purchase-modal-overlay';
+            modal.innerHTML = `
+                <div class="purchase-modal">
+                    <div class="purchase-modal-header">
+                        <h3>Confirm Purchase</h3>
+                        <button class="modal-close" onclick="this.closest('.purchase-modal-overlay').remove(); return false;">&times;</button>
+                    </div>
+                    <div class="purchase-modal-content">
+                        <div class="purchase-details">
+                            <div class="model-info">
+                                <h4>${model.name}</h4>
+                                <p class="model-description">${model.description || 'No description available'}</p>
+                                <div class="model-metadata">
+                                    <span class="model-type">${model.type || 'ML Model'}</span>
+                                    <span class="model-size">${model.size || 'Unknown size'}</span>
+                                </div>
+                            </div>
+                            <div class="price-info">
+                                <div class="price-display">
+                                    <span class="price-amount">${price}</span>
+                                    <span class="price-currency">ALGO</span>
+                                </div>
+                                <div class="wallet-balance">
+                                    Your balance: ${this.blockchainService?.getBalance() || 0} ALGO
+                                </div>
+                            </div>
+                        </div>
+                        <div class="purchase-warning">
+                            <i class="fas fa-info-circle"></i>
+                            <p>This transaction will be recorded on the Algorand blockchain and cannot be reversed.</p>
+                        </div>
+                        <div class="purchase-actions">
+                            <button class="btn btn-secondary cancel-purchase">Cancel</button>
+                            <button class="btn btn-primary confirm-purchase">
+                                <i class="fas fa-shopping-cart"></i>
+                                Purchase for ${price} ALGO
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                    resolve(false);
+                }
+                
+                if (e.target.classList.contains('cancel-purchase')) {
+                    modal.remove();
+                    resolve(false);
+                }
+                
+                if (e.target.classList.contains('confirm-purchase')) {
+                    modal.remove();
+                    resolve(true);
+                }
+            });
+
+            document.body.appendChild(modal);
+        });
+    }
+
+    /**
+     * Transfer ALGO to another address
+     */
+    async transferAlgo(toAddress, amount, note = '') {
+        try {
+            console.log(`💸 Initiating ALGO transfer: ${amount} ALGO to ${toAddress}`);
+            
+            if (!this.state.wallet.connected) {
+                this.showError('Please connect your wallet first');
+                return;
+            }
+
+            if (!this.blockchainService) {
+                this.showError('Blockchain service not available');
+                return;
+            }
+
+            this.showLoadingWithMessage(`💸 Transferring ${amount} ALGO...`);
+            
+            const transaction = await this.blockchainService.transferAlgo(toAddress, amount, note);
+            
+            console.log('✅ Transfer successful:', transaction);
+            
+            this.showSuccess(`🎉 Successfully transferred ${amount} ALGO! Transaction ID: ${transaction.txId.substring(0, 12)}...`);
+            
+            // Update UI
+            this.updateWalletUI();
+            
+            return transaction;
+            
+        } catch (error) {
+            console.error('❌ ALGO transfer failed:', error);
+            this.showError(`Transfer failed: ${error.message}`);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    /**
+     * Request testnet tokens (for demo/testing)
+     */
+    async requestTestnetTokens(amount = 10) {
+        try {
+            if (!this.state.wallet.connected) {
+                this.showError('Please connect your wallet first');
+                return;
+            }
+
+            if (!this.blockchainService) {
+                this.showError('Blockchain service not available');
+                return;
+            }
+
+            console.log('🎁 Requesting testnet tokens...');
+            const result = await this.blockchainService.requestTestnetTokens(amount);
+            
+            if (result.success) {
+                this.showSuccess(`🎁 Received ${result.amount} test ALGO! New balance: ${result.newBalance} ALGO`);
+                this.updateWalletUI();
+            } else {
+                this.showInfo(`💰 To get testnet ALGO, visit: ${result.faucetUrl}`);
+                
+                // Copy address to clipboard
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(result.address);
+                    this.showSuccess('✅ Your wallet address has been copied to clipboard');
+                }
+            }
+            
+            return result;
+            
+        } catch (error) {
+            console.error('❌ Faucet request failed:', error);
+            this.showError(`Faucet request failed: ${error.message}`);
+        }
     }
 }
 

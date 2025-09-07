@@ -1,0 +1,23 @@
+🔄 WALLET CONNECTION FIXES APPLIED - CACHE CLEAR REQUIRED
+
+To see the updated wallet connection fixes, please:
+
+1. 🔄 HARD REFRESH your browser:
+   - Chrome/Edge: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
+   - Firefox: Ctrl+F5 (Windows) or Cmd+Shift+R (Mac)
+   - Safari: Cmd+Option+R (Mac)
+
+2. 🧹 OR Clear browser cache:
+   - Open Developer Tools (F12)
+   - Right-click refresh button → "Empty Cache and Hard Reload"
+
+3. ✅ Look for this message in console:
+   "🆕 UPDATED BLOCKCHAIN SERVICE - Version 2.0"
+
+🎯 EXPECTED BEHAVIOR AFTER CACHE CLEAR:
+- Should detect 3 wallets (including Demo Wallet)
+- AlgoSigner should try multiple ledgers automatically
+- Demo Wallet should be available as fallback
+- More detailed connection logging
+
+If you still see the old behavior, the cache hasn't cleared properly.

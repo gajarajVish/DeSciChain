@@ -333,13 +333,36 @@ app.post('/api/models/purchase', (req, res) => {
   console.log('💳 POST /api/models/purchase - Processing purchase');
   console.log('Request body:', req.body);
   
-  const { modelId, buyerAddress } = req.body;
+  const { modelId, buyerAddress, price, transactionId, blockchainConfirmed } = req.body;
   
   if (!modelId || !buyerAddress) {
     return res.status(400).json({ error: 'Missing modelId or buyerAddress' });
   }
+
+  // If this is a blockchain-confirmed purchase, process immediately
+  if (blockchainConfirmed && transactionId) {
+    console.log('🔗 Processing blockchain-confirmed purchase with transaction:', transactionId);
+    
+    // Record the purchase
+    const currentPurchases = userPurchases.get(buyerAddress) || [];
+    if (!currentPurchases.includes(modelId)) {
+      currentPurchases.push(modelId);
+      userPurchases.set(buyerAddress, currentPurchases);
+    }
+    
+    const result = {
+      success: true,
+      transactionId: transactionId,
+      modelId,
+      buyerAddress,
+      price,
+      blockchainConfirmed: true
+    };
+    console.log('✅ Blockchain purchase recorded:', result);
+    return res.json(result);
+  }
   
-  // Simulate purchase processing
+  // Fallback: Simulate purchase processing for non-blockchain purchases
   setTimeout(() => {
     // Record the purchase
     const currentPurchases = userPurchases.get(buyerAddress) || [];
@@ -350,11 +373,11 @@ app.post('/api/models/purchase', (req, res) => {
     
     const result = {
       success: true,
-      transactionId: `purchase_${Date.now()}`,
+      transactionId: `mock_purchase_${Date.now()}`,
       modelId,
       buyerAddress
     };
-    console.log('✅ Purchase successful and recorded:', result);
+    console.log('✅ Mock purchase successful and recorded:', result);
     res.json(result);
   }, 1500);
 });

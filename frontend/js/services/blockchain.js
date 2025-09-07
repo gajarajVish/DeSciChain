@@ -15,6 +15,7 @@ class BlockchainService {
     async initialize() {
         try {
             console.log('🔗 Initializing blockchain service...');
+            console.log('🆕 UPDATED BLOCKCHAIN SERVICE - Version 2.0 with improved wallet support and demo fallback');
             
             // Initialize Algorand client
             this.algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
@@ -114,16 +115,15 @@ class BlockchainService {
             console.log('✅ AlgoSigner detected');
         }
 
-        // For demo purposes, always add demo wallets if none are detected
-        if (this.availableWallets.length === 0) {
-            console.log('⚠️ No real wallets detected, adding demo wallet for testing');
-            this.availableWallets.push({
-                id: 'demo',
-                name: 'Demo Wallet (For Testing)',
-                icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiNmOTY4NGEiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjEgMThWMTlBMiAyIDAgMCAxIDE5IDIxSDVBMiAyIDAgMCAxIDMgMTlWMThIOSBBMyAzIDAgMCAwIDEyIDE3QTMgMyAwIDAgMCAxNSAxOEgyMU0yMSAxNlY0QTIgMiAwIDAgMCAxOSAySDVBMiAyIDAgMCAwIDMgNFYxNkg5QTMgMyAwIDAgMSAxMiAxOUEzIDMgMCAwIDEgMTUgMTZIMjFNMTQgOUExIDEgMCAwIDEgMTMgMTBIMTFBMSAxIDAgMCAxIDEwIDlWN0ExIDEgMCAwIDEgMTEgNkgxM0ExIDEgMCAwIDEgMTQgN1Y5Wk0xMCAxMkgxNFYxNEgxMFYxMloiLz48L3N2Zz4=',
-                connector: 'demo'
-            });
-        }
+        // Always add demo wallet as a fallback option for testing
+        this.availableWallets.push({
+            id: 'demo',
+            name: 'Demo Wallet (For Testing)',
+            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiNmOTY4NGEiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjEgMThWMTlBMiAyIDAgMCAxIDE5IDIxSDVBMiAyIDAgMCAxIDMgMTlWMThIOSBBMyAzIDAgMCAwIDEyIDE3QTMgMyAwIDAgMCAxNSAxOEgyMU0yMSAxNlY0QTIgMiAwIDAgMCAxOSAySDVBMiAyIDAgMCAwIDMgNFYxNkg5QTMgMyAwIDAgMSAxMiAxOUEzIDMgMCAwIDEgMTUgMTZIMjFNMTQgOUExIDEgMCAwIDEgMTMgMTBIMTFBMSAxIDAgMCAxIDEwIDlWN0ExIDEgMCAwIDEgMTEgNkgxM0ExIDEgMCAwIDEgMTQgN1Y5Wk0xMCAxMkgxNFYxNEgxMFYxMloiLz48L3N2Zz4=',
+            connector: 'demo'
+        });
+        
+        console.log('✅ Demo wallet added as fallback option');
 
         console.log(`🔍 Detected ${this.availableWallets.length} available wallets:`, this.availableWallets.map(w => w.name));
     }
@@ -132,11 +132,46 @@ class BlockchainService {
         try {
             console.log('🔐 Attempting to connect wallet...', walletId);
             
-            // If no wallet specified, show wallet selection
-            if (!walletId && this.availableWallets.length > 1) {
-                walletId = await this.showWalletSelector();
-            } else if (!walletId && this.availableWallets.length === 1) {
-                walletId = this.availableWallets[0].id;
+            // If no wallet specified, try to auto-connect with fallbacks
+            if (!walletId) {
+                // Priority order for real wallets first, then demo as reliable fallback
+                const realWallets = ['algosigner', 'pera', 'exodus', 'defly'];
+                let connectionError = null;
+                let realWalletAttempted = false;
+                
+                // First, try real wallets
+                for (const preferredWallet of realWallets) {
+                    const wallet = this.availableWallets.find(w => w.id === preferredWallet);
+                    if (wallet) {
+                        realWalletAttempted = true;
+                        try {
+                            console.log(`🎯 Trying to connect to ${wallet.name}...`);
+                            // Recursively call connectWallet with specific wallet ID
+                            return await this.connectWallet(preferredWallet);
+                        } catch (error) {
+                            console.log(`⚠️ ${wallet.name} connection failed:`, error.message);
+                            connectionError = error;
+                            continue; // Try next wallet
+                        }
+                    }
+                }
+                
+                // If real wallets failed, show options including demo
+                console.log('🔄 Auto-connection failed, showing wallet selector...');
+                if (realWalletAttempted && connectionError) {
+                    console.log(`⚠️ Real wallets not working. Last error: ${connectionError.message}`);
+                    console.log('💡 Demo Wallet is available for testing purposes');
+                }
+                
+                if (this.availableWallets.length > 1) {
+                    console.log('🔄 Showing wallet selector (including Demo Wallet)...');
+                    walletId = await this.showWalletSelector();
+                } else if (this.availableWallets.length === 1) {
+                    console.log('🎯 Using only available wallet:', this.availableWallets[0].name);
+                    walletId = this.availableWallets[0].id;
+                } else {
+                    throw connectionError || new Error('No wallets available');
+                }
             }
 
             if (!walletId) {
@@ -173,17 +208,62 @@ class BlockchainService {
                     break;
                     
                 case 'algosigner':
+                    if (!window.AlgoSigner) {
+                        throw new Error('AlgoSigner not detected. Please install AlgoSigner extension.');
+                    }
+                    
+                    console.log('🔌 Connecting to AlgoSigner...');
                     await window.AlgoSigner.connect();
-                    accounts = await window.AlgoSigner.accounts({
-                        ledger: 'TestNet'
-                    });
-                    accounts = accounts.map(acc => acc.address);
+                    
+                    // AlgoSigner uses specific ledger names - try the exact formats they support
+                    let algoAccounts;
+                    let connectedLedger = null;
+                    const ledgerFormats = [
+                        'TestNet',    // Most common format
+                        'testnet',    // Alternative format
+                        'MainNet',    // Fallback to MainNet
+                        'mainnet'     // Alternative MainNet format
+                    ];
+                    
+                    for (const ledger of ledgerFormats) {
+                        try {
+                            console.log(`🔍 Trying AlgoSigner ledger format: ${ledger}...`);
+                            algoAccounts = await window.AlgoSigner.accounts({ 
+                                ledger: ledger 
+                            });
+                            
+                            if (algoAccounts && algoAccounts.length > 0) {
+                                connectedLedger = ledger;
+                                console.log(`✅ Connected to AlgoSigner on ${ledger} with ${algoAccounts.length} accounts`);
+                                break;
+                            }
+                            
+                        } catch (ledgerError) {
+                            console.log(`⚠️ ${ledger} format failed:`, ledgerError.message);
+                            continue;
+                        }
+                    }
+                    
+                    if (!connectedLedger || !algoAccounts || algoAccounts.length === 0) {
+                        throw new Error(`AlgoSigner connection failed. Please ensure you have accounts set up in AlgoSigner and the extension is unlocked. Tried ledger formats: ${ledgerFormats.join(', ')}`);
+                    }
+                    
+                    if (!algoAccounts || algoAccounts.length === 0) {
+                        throw new Error(`No accounts found in AlgoSigner on ${connectedLedger}. Please create or import accounts in the AlgoSigner extension.`);
+                    }
+                    
+                    accounts = algoAccounts.map(acc => ({ address: acc.address }));
+                    console.log(`✅ AlgoSigner connected with ${accounts.length} accounts on ${connectedLedger}:`, accounts);
+                    
+                    // Store the connected ledger for later use
+                    this.connectedLedger = connectedLedger;
                     break;
                 
                 case 'demo':
                     // Demo wallet for testing
-                    accounts = [this.generateDemoAddress()];
+                    accounts = [{ address: this.generateDemoAddress() }];
                     console.log('🎭 Demo wallet connected for testing purposes');
+                    console.log('⚠️ Using demo mode - transactions will not be real!');
                     break;
                     
                 default:
@@ -194,7 +274,7 @@ class BlockchainService {
                 throw new Error('No accounts found');
             }
 
-            const primaryAddress = accounts[0];
+            const primaryAddress = accounts[0].address;
             
             this.connectedAccount = {
                 address: primaryAddress,
@@ -226,62 +306,161 @@ class BlockchainService {
             
         } catch (error) {
             console.error('❌ Wallet connection failed:', error);
-            throw new Error(`Failed to connect wallet: ${error.message}`);
+            
+            // Provide more helpful error messages
+            if (error.message.includes('AlgoSigner not detected')) {
+                throw new Error('AlgoSigner extension not found. Please install AlgoSigner from the Chrome Web Store, or use the Demo Wallet for testing.');
+            } else if (error.message.includes('Exodus wallet not detected')) {
+                throw new Error('Exodus wallet not found. Please install Exodus wallet and enable Algorand support, or use the Demo Wallet for testing.');
+            } else if (error.message.includes('No TestNet accounts') || error.message.includes('No accounts found')) {
+                throw new Error('No accounts found in your wallet. Please create accounts, or use the Demo Wallet for testing.');
+            } else {
+                throw new Error(`Wallet connection failed: ${error.message}. You can use the Demo Wallet for testing.`);
+            }
         }
     }
 
     async connectExodusWallet() {
         try {
-            if (window.algorand) {
-                console.log('🔌 Found Exodus algorand provider, attempting connection...');
-                
-                try {
-                    // Try the standard enable method first
-                    const accounts = await window.algorand.enable();
-                    if (accounts && accounts.length > 0) {
-                        console.log('✅ Exodus wallet connected via enable():', accounts);
-                        return accounts;
-                    }
-                } catch (enableError) {
-                    console.log('⚠️ Standard enable() failed, trying alternative methods...');
+            console.log('🔌 Attempting to connect to Exodus wallet...');
+            
+            // Wait for wallet providers to fully load
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Enhanced provider detection - check multiple patterns
+            let provider = null;
+            const providerPaths = [
+                { path: 'window.algorand', value: window.algorand },
+                { path: 'window.exodus?.algorand', value: window.exodus?.algorand },
+                { path: 'window.ExodusAlgorand', value: window.ExodusAlgorand },
+                { path: 'window.exodus?.algorand?.provider', value: window.exodus?.algorand?.provider },
+                { path: 'window.exodus?.providers?.algorand', value: window.exodus?.providers?.algorand }
+            ];
+            
+            console.log('🔍 Checking for Exodus providers...');
+            for (const { path, value } of providerPaths) {
+                if (value && typeof value === 'object') {
+                    console.log(`✅ Found provider at ${path}`);
+                    console.log(`🔍 Provider keys:`, Object.keys(value));
+                    console.log(`🔍 Provider prototype:`, Object.getOwnPropertyNames(Object.getPrototypeOf(value)));
+                    provider = value;
+                    break;
                 }
-
-                try {
-                    // Try requesting accounts directly
-                    const accounts = await window.algorand.request({ method: 'algo_accounts' });
-                    if (accounts && accounts.length > 0) {
-                        console.log('✅ Exodus wallet connected via request():', accounts);
-                        return accounts;
-                    }
-                } catch (requestError) {
-                    console.log('⚠️ Request method failed, trying connect()...');
-                }
-
-                try {
-                    // Try the connect method if available
-                    if (window.algorand.connect) {
-                        const result = await window.algorand.connect();
-                        if (result && result.accounts) {
-                            console.log('✅ Exodus wallet connected via connect():', result.accounts);
-                            return result.accounts;
-                        }
-                    }
-                } catch (connectError) {
-                    console.log('⚠️ Connect method failed...');
-                }
-
-                // If all else fails, generate a demo address for Exodus testing
-                console.log('⚠️ All connection methods failed, using demo mode for Exodus');
-                return [this.generateDemoAddress()];
-                
-            } else {
-                throw new Error('Exodus wallet not detected');
             }
+            
+            if (!provider) {
+                throw new Error(`Could not connect to Exodus wallet. Please:
+1. Make sure Exodus is open
+2. Enable Algorand in Exodus
+3. Try refreshing the page`);
+            }
+
+            console.log('🔌 Found Exodus algorand provider, attempting connection...');
+            console.log('🔍 Provider methods:', Object.keys(provider));
+            
+            // Enhanced connection attempt with multiple strategies
+            let accounts = null;
+            const strategies = [
+                {
+                    name: 'enable',
+                    attempt: async () => {
+                        if (typeof provider.enable === 'function') {
+                            return await provider.enable();
+                        }
+                        return null;
+                    }
+                },
+                {
+                    name: 'connect',
+                    attempt: async () => {
+                        if (typeof provider.connect === 'function') {
+                            return await provider.connect();
+                        }
+                        return null;
+                    }
+                },
+                {
+                    name: 'request_algo_accounts',
+                    attempt: async () => {
+                        if (typeof provider.request === 'function') {
+                            return await provider.request({ method: 'algo_accounts' });
+                        }
+                        return null;
+                    }
+                },
+                {
+                    name: 'request_eth_accounts',
+                    attempt: async () => {
+                        if (typeof provider.request === 'function') {
+                            return await provider.request({ method: 'eth_accounts' });
+                        }
+                        return null;
+                    }
+                },
+                {
+                    name: 'getAccounts',
+                    attempt: async () => {
+                        if (typeof provider.getAccounts === 'function') {
+                            return await provider.getAccounts();
+                        }
+                        return null;
+                    }
+                },
+                {
+                    name: 'direct_accounts',
+                    attempt: async () => {
+                        if (provider.accounts && Array.isArray(provider.accounts)) {
+                            return provider.accounts;
+                        }
+                        return null;
+                    }
+                }
+            ];
+            
+            for (const strategy of strategies) {
+                try {
+                    console.log(`🔄 Trying ${strategy.name} method...`);
+                    const result = await strategy.attempt();
+                    
+                    if (result && Array.isArray(result) && result.length > 0) {
+                        accounts = result;
+                        console.log(`✅ Exodus wallet connected via ${strategy.name}:`, accounts);
+                        break;
+                    } else if (result && result.accounts && Array.isArray(result.accounts) && result.accounts.length > 0) {
+                        accounts = result.accounts;
+                        console.log(`✅ Exodus wallet connected via ${strategy.name} (nested):`, accounts);
+                        break;
+                    }
+                    
+                } catch (error) {
+                    console.log(`⚠️ ${strategy.name} method failed:`, error.message);
+                    continue;
+                }
+            }
+            
+            if (!accounts || !Array.isArray(accounts) || accounts.length === 0) {
+                // If we found the provider but can't get accounts, it might be locked
+                throw new Error(`Could not connect to Exodus wallet. Please:
+1. Make sure Exodus is open
+2. Enable Algorand in Exodus
+3. Try refreshing the page`);
+            }
+            
+            // Normalize account format
+            return accounts.map(addr => {
+                if (typeof addr === 'string') {
+                    return { address: addr };
+                } else if (addr && addr.address) {
+                    return addr;
+                } else {
+                    console.warn('Unexpected account format:', addr);
+                    return { address: String(addr) };
+                }
+            });
+                
         } catch (error) {
             console.error('❌ Exodus wallet connection failed:', error);
-            // Return demo address instead of failing
-            console.log('🎭 Falling back to demo address for Exodus wallet');
-            return [this.generateDemoAddress()];
+            throw error;
         }
     }
 
@@ -510,6 +689,25 @@ class BlockchainService {
                     }]);
                     break;
                     
+                case 'demo':
+                    // Demo wallet - simulate transaction signing and balance deduction
+                    console.log('🎭 Demo wallet: Simulating transaction signing...');
+                    
+                    // For demo purposes, deduct the balance immediately
+                    const amount = txn.amount / 1000000; // Convert from microAlgos to ALGO
+                    console.log(`💸 Demo wallet: Deducting ${amount} ALGO from balance`);
+                    
+                    if (this.connectedAccount.balance < amount) {
+                        throw new Error(`Demo wallet: Insufficient balance. Have ${this.connectedAccount.balance} ALGO, need ${amount} ALGO`);
+                    }
+                    
+                    this.connectedAccount.balance -= amount;
+                    console.log(`💰 Demo wallet: New balance: ${this.connectedAccount.balance} ALGO`);
+                    
+                    // Return a fake signed transaction
+                    signedTxn = new Uint8Array(100); // Fake signed transaction bytes
+                    break;
+                    
                 default:
                     throw new Error(`Signing not implemented for ${walletType}`);
             }
@@ -599,6 +797,368 @@ class BlockchainService {
 
     getAvailableWallets() {
         return this.availableWallets;
+    }
+
+    /**
+     * Create a payment transaction
+     */
+    async createPaymentTransaction(from, to, amount, note = '') {
+        try {
+            if (!this.algodClient) {
+                throw new Error('Algorand client not initialized');
+            }
+
+            const params = await this.algodClient.getTransactionParams().do();
+            const amountMicroAlgos = Math.round(amount * 1000000); // Convert ALGO to microAlgos
+            
+            const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+                from: from,
+                to: to,
+                amount: amountMicroAlgos,
+                note: new TextEncoder().encode(note),
+                suggestedParams: params,
+            });
+
+            console.log(`💰 Created payment transaction: ${amount} ALGO from ${from} to ${to}`);
+            return txn;
+        } catch (error) {
+            console.error('❌ Error creating payment transaction:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sign and submit a transaction using the connected wallet
+     */
+    async signAndSubmitTransaction(txn) {
+        try {
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            console.log('🔏 Signing and submitting transaction with', this.connectedAccount.walletName);
+            
+            // Sign the transaction
+            const signedTxn = await this.signTransaction(txn);
+            
+            // Handle demo wallet differently (don't submit to real network)
+            if (this.connectedAccount.walletType === 'demo') {
+                console.log('🎭 Demo wallet: Simulating transaction submission...');
+                
+                // Generate a fake transaction ID for demo purposes
+                const fakeTxId = 'DEMO_TX_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                
+                console.log('✅ Demo transaction completed successfully:', fakeTxId);
+                
+                return {
+                    txId: fakeTxId,
+                    confirmation: { round: Date.now(), txId: fakeTxId }
+                };
+            }
+            
+            // Submit the signed transaction to real network
+            console.log('📤 Submitting signed transaction to network...');
+            const result = await this.algodClient.sendRawTransaction(signedTxn).do();
+            
+            console.log('✅ Transaction submitted successfully:', result.txId);
+            
+            // Wait for confirmation
+            const confirmation = await this.waitForConfirmation(result.txId);
+            console.log('✅ Transaction confirmed:', confirmation);
+            
+            return {
+                txId: result.txId,
+                confirmation: confirmation
+            };
+            
+        } catch (error) {
+            console.error('❌ Error signing/submitting transaction:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Wait for transaction confirmation
+     */
+    async waitForConfirmation(txId, timeout = 10) {
+        try {
+            let lastRound = (await this.algodClient.status().do())['last-round'];
+            
+            while (timeout > 0) {
+                const pendingInfo = await this.algodClient.pendingTransactionInformation(txId).do();
+                
+                if (pendingInfo['confirmed-round'] !== null && pendingInfo['confirmed-round'] > 0) {
+                    return pendingInfo;
+                }
+                
+                lastRound++;
+                await this.algodClient.statusAfterBlock(lastRound).do();
+                timeout--;
+            }
+            
+            throw new Error('Transaction confirmation timeout');
+        } catch (error) {
+            console.error('❌ Error waiting for confirmation:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Buy/Sell functionality for testnet ALGO
+     */
+    
+    /**
+     * Purchase a model with ALGO
+     */
+    async buyModel(modelId, price, sellerAddress) {
+        try {
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            console.log(`💰 Purchasing model ${modelId} for ${price} ALGO from ${sellerAddress}`);
+            
+            // Check if user has sufficient balance
+            if (this.connectedAccount.balance < price) {
+                throw new Error(`Insufficient balance. You have ${this.connectedAccount.balance} ALGO, need ${price} ALGO`);
+            }
+
+            // Create payment transaction
+            const txn = await this.createPaymentTransaction(
+                this.connectedAccount.address,
+                sellerAddress,
+                price,
+                `DeSciFi Model Purchase: ${modelId}`
+            );
+
+            // Sign and submit transaction
+            const result = await this.signAndSubmitTransaction(txn);
+            
+            console.log(`✅ Model purchase completed! Transaction: ${result.txId}`);
+            
+            // Update balance after transaction
+            await this.updateAccountBalance();
+            
+            return {
+                txId: result.txId,
+                modelId: modelId,
+                price: price,
+                seller: sellerAddress,
+                buyer: this.connectedAccount.address,
+                status: 'completed'
+            };
+            
+        } catch (error) {
+            console.error('❌ Model purchase failed:', error);
+            throw new Error(`Failed to purchase model: ${error.message}`);
+        }
+    }
+
+    /**
+     * Sell a model (receive ALGO payment)
+     */
+    async sellModel(modelId, price, buyerAddress) {
+        try {
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            console.log(`💸 Selling model ${modelId} for ${price} ALGO to ${buyerAddress}`);
+            
+            // In a real marketplace, this would be handled by the buyer
+            // This is a simulation for testing purposes
+            console.log(`📝 Model ${modelId} listed for sale at ${price} ALGO`);
+            
+            return {
+                modelId: modelId,
+                price: price,
+                seller: this.connectedAccount.address,
+                buyer: buyerAddress,
+                status: 'listed'
+            };
+            
+        } catch (error) {
+            console.error('❌ Model listing failed:', error);
+            throw new Error(`Failed to list model: ${error.message}`);
+        }
+    }
+
+    /**
+     * Transfer ALGO to another address (general purpose)
+     */
+    async transferAlgo(toAddress, amount, note = '') {
+        try {
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            console.log(`💸 Transferring ${amount} ALGO to ${toAddress}`);
+            
+            // Check balance
+            if (this.connectedAccount.balance < amount) {
+                throw new Error(`Insufficient balance. You have ${this.connectedAccount.balance} ALGO, need ${amount} ALGO`);
+            }
+
+            // Create and send transaction
+            const txn = await this.createPaymentTransaction(
+                this.connectedAccount.address,
+                toAddress,
+                amount,
+                note
+            );
+
+            const result = await this.signAndSubmitTransaction(txn);
+            
+            console.log(`✅ Transfer completed! Transaction: ${result.txId}`);
+            
+            // Update balance after transaction
+            await this.updateAccountBalance();
+            
+            return {
+                txId: result.txId,
+                from: this.connectedAccount.address,
+                to: toAddress,
+                amount: amount,
+                note: note,
+                status: 'completed'
+            };
+            
+        } catch (error) {
+            console.error('❌ ALGO transfer failed:', error);
+            throw new Error(`Failed to transfer ALGO: ${error.message}`);
+        }
+    }
+
+    /**
+     * Update account balance after transactions
+     */
+    async updateAccountBalance() {
+        try {
+            if (!this.connectedAccount || this.connectedAccount.walletType === 'demo') {
+                return;
+            }
+
+            const accountInfo = await this.getAccountInfo(this.connectedAccount.address);
+            const newBalance = accountInfo.amount / 1000000;
+            
+            console.log(`💰 Balance updated: ${this.connectedAccount.balance} → ${newBalance} ALGO`);
+            this.connectedAccount.balance = newBalance;
+            
+            // Trigger UI update if needed
+            if (window.app && typeof window.app.updateWalletUI === 'function') {
+                window.app.updateWalletUI();
+            }
+            
+        } catch (error) {
+            console.warn('⚠️ Could not update balance:', error.message);
+        }
+    }
+
+    /**
+     * Get transaction history for connected account
+     */
+    async getTransactionHistory(limit = 10) {
+        try {
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            if (this.connectedAccount.walletType === 'demo') {
+                // Return mock transaction history for demo wallet
+                return [
+                    {
+                        txId: 'DEMO_TX_1',
+                        amount: 5.0,
+                        type: 'receive',
+                        from: 'DEMO_SENDER',
+                        to: this.connectedAccount.address,
+                        note: 'Demo transaction',
+                        timestamp: Date.now() - 3600000
+                    },
+                    {
+                        txId: 'DEMO_TX_2', 
+                        amount: 2.5,
+                        type: 'send',
+                        from: this.connectedAccount.address,
+                        to: 'DEMO_RECEIVER',
+                        note: 'Demo purchase',
+                        timestamp: Date.now() - 7200000
+                    }
+                ];
+            }
+
+            console.log('📊 Fetching transaction history...');
+            
+            // Get transactions from Algorand indexer
+            // Note: This requires an indexer endpoint which may not be available in all environments
+            const indexerUrl = 'https://testnet-idx.algonode.cloud';
+            const response = await fetch(`${indexerUrl}/v2/accounts/${this.connectedAccount.address}/transactions?limit=${limit}`);
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch transaction history');
+            }
+            
+            const data = await response.json();
+            const transactions = data.transactions || [];
+            
+            return transactions.map(tx => ({
+                txId: tx.id,
+                amount: (tx['payment-transaction']?.amount || 0) / 1000000,
+                type: tx.sender === this.connectedAccount.address ? 'send' : 'receive',
+                from: tx.sender,
+                to: tx['payment-transaction']?.receiver || 'Unknown',
+                note: tx.note ? atob(tx.note) : '',
+                timestamp: tx['round-time'] * 1000
+            }));
+            
+        } catch (error) {
+            console.error('❌ Failed to get transaction history:', error);
+            return []; // Return empty array on error
+        }
+    }
+
+    /**
+     * Simulate testnet faucet (for demo purposes)
+     */
+    async requestTestnetTokens(amount = 10) {
+        try {
+            if (!this.connectedAccount) {
+                throw new Error('No wallet connected');
+            }
+
+            if (this.connectedAccount.walletType === 'demo') {
+                // Simulate receiving tokens for demo wallet
+                this.connectedAccount.balance += amount;
+                console.log(`🎁 Demo wallet received ${amount} test ALGO! New balance: ${this.connectedAccount.balance} ALGO`);
+                
+                // Update UI
+                if (window.app && typeof window.app.updateWalletUI === 'function') {
+                    window.app.updateWalletUI();
+                }
+                
+                return {
+                    success: true,
+                    amount: amount,
+                    newBalance: this.connectedAccount.balance,
+                    txId: 'DEMO_FAUCET_' + Date.now()
+                };
+            }
+
+            console.log(`💰 Requesting ${amount} testnet ALGO from faucet...`);
+            console.log(`📝 Visit https://testnet.algoexplorer.io/dispenser for testnet tokens`);
+            console.log(`🔗 Your address: ${this.connectedAccount.address}`);
+            
+            return {
+                success: false,
+                message: 'Please visit the testnet faucet to request tokens',
+                faucetUrl: 'https://testnet.algoexplorer.io/dispenser',
+                address: this.connectedAccount.address
+            };
+            
+        } catch (error) {
+            console.error('❌ Faucet request failed:', error);
+            throw error;
+        }
     }
 }
 
