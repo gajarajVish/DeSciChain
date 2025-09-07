@@ -2,6 +2,12 @@
 
 A production-ready, blockchain-based marketplace for machine learning models built on Algorand with IPFS storage, featuring advanced cryptography, multi-wallet support, and comprehensive model protection through watermarking and encryption.
 
+<img width="1030" height="901" alt="image" src="https://github.com/user-attachments/assets/97f3b797-ced8-4e91-bc30-2d36fd83c516" />
+
+<img width="933" height="735" alt="image" src="https://github.com/user-attachments/assets/ec2a0a1d-d40e-4511-8560-ee2260059563" />
+
+<img width="933" height="983" alt="image" src="https://github.com/user-attachments/assets/93622990-0935-4b09-a842-6c73f865b297" />
+
 ## 🚀 Overview
 
 DeSciFi enables researchers and data scientists to securely monetize their ML models while ensuring intellectual property protection. Built with modern web technologies and leveraging Algorand's blockchain infrastructure for transparent, secure transactions.
