@@ -10,7 +10,7 @@ A production-ready, blockchain-based marketplace for machine learning models bui
 
 Link to Video Demo:
 
-https://www.loom.com/share/cca36cd7d1b64bf8bb4c8f251cda95dd?sid=71a8a7a8-48bd-4c8f-a63d-9dc774343b0c
+https://www.loom.com/share/491d481ecff342e8b1806d478e45651d?sid=104974f8-3217-40c3-a865-0e57b3505ae4
 
 ## 🚀 Overview
 
