@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeSciChain - Exodus Wallet Edition</title>
+    <link rel="stylesheet" href="./styles/app.css">
+    <style>
+        .exodus-hero {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: linear-gradient(135deg, #0484ff 0%, #0066cc 100%);
+            color: white;
+            margin-bottom: 2rem;
+        }
+        .exodus-hero h1 {
+            margin: 0 0 1rem 0;
+            font-size: 2.5rem;
+        }
+        .exodus-hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .wallet-status {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: var(--radius-xl);
+            margin: 2rem auto;
+            max-width: 600px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .connected {
+            border-color: var(--success);
+            background: rgba(34, 197, 94, 0.05);
+        }
+        .wallet-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .info-card {
+            background: var(--background);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+        .info-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        .info-card p {
+            margin: 0;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="exodus-hero">
+        <h1>🚀 DeSciChain × Exodus</h1>
+        <p>Medical AI Marketplace optimized for Exodus Wallet</p>
+    </div>
+
+    <div class="container">
+        <div id="wallet-section" class="wallet-status">
+            <h2>Connect Your Exodus Wallet</h2>
+            <p>To buy and sell medical AI models, connect your Exodus wallet with Algorand support.</p>
+            <button id="connect-btn" class="btn btn-primary btn-large">
+                🔌 Connect Exodus Wallet
+            </button>
+            <div id="wallet-info" class="wallet-info" style="display: none;"></div>
+        </div>
+
+        <div id="models-section" style="display: none;">
+            <div class="section-header">
+                <h2>Available Medical AI Models</h2>
+                <p>Purchase secure, encrypted medical AI models using ALGO</p>
+            </div>
+            <div id="models-grid" class="models-grid"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/algosdk@2.7.0/dist/browser/algosdk.min.js"></script>
+    <script src="./js/services/api.js"></script>
+    <script src="./js/services/blockchain.js"></script>
+    <script src="./js/utils/helpers.js"></script>
+
+    <script>
+        let app = {
+            blockchainService: null,
+            apiService: null,
+            state: {
+                wallet: { connected: false, address: null, balance: 0 },
+                models: []
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Exodus-focused DeSciChain App Loading...');
+            
+            // Initialize services
+            app.blockchainService = new BlockchainService();
+            app.apiService = new APIService();
+            
+            await app.blockchainService.initialize();
+            
+            setupEventListeners();
+            checkExodusStatus();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('connect-btn').addEventListener('click', connectExodus);
+        }
+
+        function checkExodusStatus() {
+            const availableWallets = app.blockchainService.getAvailableWallets();
+            const exodusWallet = availableWallets.find(w => w.id === 'exodus');
+            const connectBtn = document.getElementById('connect-btn');
+
+            if (exodusWallet) {
+                connectBtn.innerHTML = '🔌 Connect Exodus Wallet';
+                connectBtn.disabled = false;
+                console.log('✅ Exodus wallet ready for connection');
+            } else {
+                connectBtn.innerHTML = '⚠️ Exodus Not Detected';
+                connectBtn.disabled = true;
+                showError('Exodus wallet not detected. Please install Exodus and enable Algorand support.');
+            }
+        }
+
+        async function connectExodus() {
+            const connectBtn = document.getElementById('connect-btn');
+            const walletSection = document.getElementById('wallet-section');
+            
+            try {
+                connectBtn.innerHTML = '🔄 Connecting...';
+                connectBtn.disabled = true;
+
+                const address = await app.blockchainService.connectWallet('exodus');
+
+                if (address) {
+                    app.state.wallet = {
+                        connected: true,
+                        address: address,
+                        balance: app.blockchainService.getBalance(),
+                        walletType: app.blockchainService.getWalletType(),
+                        walletName: app.blockchainService.getWalletName()
+                    };
+
+                    // Update UI
+                    walletSection.classList.add('connected');
+                    walletSection.innerHTML = `
+                        <h2>✅ Exodus Wallet Connected</h2>
+                        <div class="wallet-info">
+                            <div class="info-card">
+                                <h4>Address</h4>
+                                <p>${address.substring(0, 8)}...${address.slice(-6)}</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Balance</h4>
+                                <p>${app.state.wallet.balance.toFixed(3)} ALGO</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Wallet</h4>
+                                <p>${app.state.wallet.walletName}</p>
+                            </div>
+                        </div>
+                        <button onclick="disconnectWallet()" class="btn btn-outline">
+                            🔓 Disconnect
+                        </button>
+                    `;
+
+                    // Load and show models
+                    await loadModels();
+                    document.getElementById('models-section').style.display = 'block';
+
+                    showSuccess(`🎉 Connected to Exodus! You can now purchase medical AI models.`);
+                } else {
+                    throw new Error('No address returned from Exodus wallet');
+                }
+
+            } catch (error) {
+                console.error('❌ Exodus connection failed:', error);
+                showError(`Connection failed: ${error.message}`);
+                connectBtn.innerHTML = '🔌 Connect Exodus Wallet';
+                connectBtn.disabled = false;
+            }
+        }
+
+        async function loadModels() {
+            try {
+                const response = await app.apiService.getModels();
+                if (response.success) {
+                    app.state.models = response.data || [];
+                    renderModels();
+                }
+            } catch (error) {
+                console.error('Failed to load models:', error);
+            }
+        }
+
+        function renderModels() {
+            const grid = document.getElementById('models-grid');
+            if (app.state.models.length === 0) {
+                grid.innerHTML = '<p>No models available</p>';
+                return;
+            }
+
+            grid.innerHTML = app.state.models.map(model => `
+                <div class="model-card">
+                    <div class="model-card-content">
+                        <h3>${model.name}</h3>
+                        <p>${model.description}</p>
+                        <div class="model-details">
+                            <span class="model-type">${model.type}</span>
+                            <span class="model-price">${model.price} ALGO</span>
+                        </div>
+                        <div class="model-actions">
+                            <button class="btn btn-primary btn-small" onclick="purchaseModel('${model.id}', ${model.price}, '${model.publisherAddress}')">
+                                🛒 Purchase
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function purchaseModel(modelId, price, sellerAddress) {
+            try {
+                showSuccess('🔄 Processing purchase with Exodus...');
+                
+                const result = await app.blockchainService.buyModel(modelId, price, sellerAddress);
+                
+                showSuccess(`🎉 Purchase successful! Transaction: ${result.txId}`);
+                
+                // Update balance
+                app.state.wallet.balance = app.blockchainService.getBalance();
+                
+            } catch (error) {
+                console.error('Purchase failed:', error);
+                showError(`Purchase failed: ${error.message}`);
+            }
+        }
+
+        async function disconnectWallet() {
+            try {
+                await app.blockchainService.disconnectWallet();
+                location.reload(); // Simple way to reset UI
+            } catch (error) {
+                console.error('Disconnect failed:', error);
+                location.reload();
+            }
+        }
+
+        function showSuccess(message) {
+            console.log('✅', message);
+            // You could add toast notifications here
+        }
+
+        function showError(message) {
+            console.error('❌', message);
+            alert(message); // Simple error display
+        }
+
+        // Make functions globally accessible
+        window.purchaseModel = purchaseModel;
+        window.disconnectWallet = disconnectWallet;
+    </script>
+</body>
+</html>
