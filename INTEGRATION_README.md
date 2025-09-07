@@ -1,4 +1,4 @@
-# DeSciChain - Integrated ML Models Marketplace
+# DeSciFi - Integrated ML Models Marketplace
 
 A fully functional, integrated ML Models Marketplace built on Algorand blockchain with IPFS storage, encryption, and watermarking. This application combines the existing crypto marketplace UI with your backend services to create a working ML model trading platform.
 
@@ -63,7 +63,7 @@ The application will be available at:
 ## 📁 Project Structure
 
 ```
-DeSciChain/
+DeSciFi/
 ├── contracts/                 # Smart Contracts (PyTeal)
 │   ├── ModelRegistry.py      # Model registration contract
 │   ├── Escrow.py             # Payment escrow contract
@@ -306,11 +306,11 @@ MIT License - see LICENSE file for details.
 
 - **Documentation**: See README.md
 - **Issues**: GitHub Issues
-- **Discord**: DeSciChain Community
+- **Discord**: DeSciFi Community
 
 ---
 
-**🎉 Your DeSciChain ML Models Marketplace is now fully integrated and ready to use!**
+**🎉 Your DeSciFi ML Models Marketplace is now fully integrated and ready to use!**
 
 The application combines the best of both worlds:
 - **Beautiful UI** from the crypto marketplace

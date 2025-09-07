@@ -1,5 +1,5 @@
 """
-Deploy Contracts Script for DeSciChain
+Deploy Contracts Script for DeSciFi
 Deploys ModelRegistry and Escrow contracts to Algorand TestNet
 """
 

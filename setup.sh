@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# DeSciChain Setup Script
+# DeSciFi Setup Script
 # Sets up the complete ML Models Marketplace application
 
 set -e
 
-echo "🚀 Setting up DeSciChain ML Models Marketplace..."
+echo "🚀 Setting up DeSciFi ML Models Marketplace..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -232,7 +232,7 @@ create_startup_scripts() {
     # Backend start script
     cat > start-backend.sh << 'EOF'
 #!/bin/bash
-echo "🚀 Starting DeSciChain Backend..."
+echo "🚀 Starting DeSciFi Backend..."
 cd backend
 npm run dev
 EOF
@@ -241,7 +241,7 @@ EOF
     # Frontend start script
     cat > start-frontend.sh << 'EOF'
 #!/bin/bash
-echo "🌐 Starting DeSciChain Frontend..."
+echo "🌐 Starting DeSciFi Frontend..."
 cd frontend
 npm start
 EOF
@@ -250,7 +250,7 @@ EOF
     # Full application start script
     cat > start-app.sh << 'EOF'
 #!/bin/bash
-echo "🚀 Starting DeSciChain ML Models Marketplace..."
+echo "🚀 Starting DeSciFi ML Models Marketplace..."
 
 # Start backend in background
 echo "Starting backend..."
@@ -284,7 +284,7 @@ EOF
 
 # Main setup function
 main() {
-    echo "🎯 DeSciChain ML Models Marketplace Setup"
+    echo "🎯 DeSciFi ML Models Marketplace Setup"
     echo "========================================"
     echo ""
     

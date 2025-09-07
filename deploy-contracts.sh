@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# DeSciChain Smart Contracts Deployment Script
+# DeSciFi Smart Contracts Deployment Script
 # Deploys ModelRegistry and Escrow contracts to Algorand TestNet
 
 set -e
 
-echo "🚀 Deploying DeSciChain Smart Contracts..."
+echo "🚀 Deploying DeSciFi Smart Contracts..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -130,7 +130,7 @@ test_contracts() {
 
 # Main function
 main() {
-    echo "🎯 DeSciChain Smart Contracts Deployment"
+    echo "🎯 DeSciFi Smart Contracts Deployment"
     echo "======================================="
     echo ""
     

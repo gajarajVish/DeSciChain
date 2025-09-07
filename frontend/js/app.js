@@ -1,9 +1,9 @@
 /**
- * DeSciChain ML Models Marketplace - Main Application
+ * DeSciFi ML Models Marketplace - Main Application
  * Modern JavaScript application for ML model trading on Algorand
  */
 
-class DeSciChainApp {
+class DeSciFiApp {
     constructor() {
         this.state = {
             wallet: {
@@ -35,7 +35,7 @@ class DeSciChainApp {
 
     async init() {
         try {
-            console.log('🚀 Initializing DeSciChain App...');
+            console.log('🚀 Initializing DeSciFi App...');
             
             // Apply theme
             this.applyTheme();
@@ -51,7 +51,7 @@ class DeSciChainApp {
             // Load initial data
             await this.loadModels();
             
-            console.log('✅ DeSciChain App initialized successfully');
+            console.log('✅ DeSciFi App initialized successfully');
             
         } catch (error) {
             console.error('❌ Failed to initialize app:', error);
@@ -1310,5 +1310,5 @@ class DeSciChainApp {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.app = new DeSciChainApp();
+    window.app = new DeSciFiApp();
 });

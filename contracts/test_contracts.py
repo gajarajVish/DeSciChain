@@ -1,5 +1,5 @@
 """
-Tests for DeSciChain Smart Contracts
+Tests for DeSciFi Smart Contracts
 """
 
 import pytest
@@ -77,7 +77,7 @@ def test_contract_abi_specs():
 
 def run_basic_tests():
     """Run basic compilation and validation tests"""
-    print("🧪 Running DeSciChain Smart Contract Tests")
+    print("🧪 Running DeSciFi Smart Contract Tests")
     
     tests = [
         test_model_registry_compilation,

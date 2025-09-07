@@ -1,5 +1,5 @@
 /**
- * Database Migration Script for DeSciChain
+ * Database Migration Script for DeSciFi
  * Sets up the complete database schema for the ML models marketplace
  */
 
@@ -22,7 +22,7 @@ async function runMigration() {
         // Import pg dynamically to handle missing dependency gracefully
         const { Client } = require('pg');
         
-        console.log('🚀 Starting DeSciChain database migration...');
+        console.log('🚀 Starting DeSciFi database migration...');
         console.log(`📍 Connecting to database: ${DB_CONFIG.host}:${DB_CONFIG.port}/${DB_CONFIG.database}`);
         
         // Create database client

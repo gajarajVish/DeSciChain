@@ -1,5 +1,5 @@
 /**
- * Secure Models Routes for DeSciChain
+ * Secure Models Routes for DeSciFi
  * Implements wallet-first flows with no server-side private key handling
  */
 

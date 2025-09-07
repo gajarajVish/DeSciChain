@@ -1,10 +1,10 @@
-# DeSciChain - Decentralized ML Models Marketplace
+# DeSciFi - Decentralized ML Models Marketplace
 
 A production-ready, blockchain-based marketplace for machine learning models built on Algorand with IPFS storage, featuring advanced cryptography, multi-wallet support, and comprehensive model protection through watermarking and encryption.
 
 ## 🚀 Overview
 
-DeSciChain enables researchers and data scientists to securely monetize their ML models while ensuring intellectual property protection. Built with modern web technologies and leveraging Algorand's blockchain infrastructure for transparent, secure transactions.
+DeSciFi enables researchers and data scientists to securely monetize their ML models while ensuring intellectual property protection. Built with modern web technologies and leveraging Algorand's blockchain infrastructure for transparent, secure transactions.
 
 ### **Key Features**
 
@@ -39,7 +39,7 @@ DeSciChain enables researchers and data scientists to securely monetize their ML
 ## 📁 Project Structure
 
 ```
-DeSciChain/
+DeSciFi/
 ├── contracts/                      # Smart Contracts (PyTeal)
 │   ├── ModelRegistry.py           # Model registration contract
 │   ├── Escrow.py                  # Payment escrow contract
@@ -135,7 +135,7 @@ DeSciChain/
 ```bash
 # Clone and setup
 git clone <your-repo-url>
-cd DeSciChain
+cd DeSciFi
 
 # Run automated setup
 chmod +x setup.sh

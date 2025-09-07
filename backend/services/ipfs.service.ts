@@ -1,5 +1,5 @@
 /**
- * IPFS Service for DeSciChain
+ * IPFS Service for DeSciFi
  * Handles file upload and download to IPFS
  */
 

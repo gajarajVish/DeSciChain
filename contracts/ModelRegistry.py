@@ -1,5 +1,5 @@
 """
-ModelRegistry Smart Contract for DeSciChain
+ModelRegistry Smart Contract for DeSciFi
 Production-ready contract for managing ML model registration on Algorand
 """
 

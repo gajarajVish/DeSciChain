@@ -30,7 +30,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 DeSciChain Frontend running on port ${PORT}`);
+    console.log(`🚀 DeSciFi Frontend running on port ${PORT}`);
     console.log(`📡 Proxying API requests to: ${BACKEND_URL}`);
     console.log(`🌐 Open http://localhost:${PORT} to view the application`);
 });

@@ -1,5 +1,5 @@
 """
-Escrow Smart Contract for DeSciChain
+Escrow Smart Contract for DeSciFi
 Production-ready contract for managing payment escrow in model purchases
 """
 

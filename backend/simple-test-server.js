@@ -1,5 +1,5 @@
 /**
- * Simple test server for DeSciChain integration testing
+ * Simple test server for DeSciFi integration testing
  * Provides mock API endpoints for frontend testing
  */
 
@@ -151,7 +151,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    message: 'DeSciChain Test Backend is running'
+    message: 'DeSciFi Test Backend is running'
   });
 });
 
@@ -524,7 +524,7 @@ app.get('/api/names/resolve-address/:address', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log('🚀 DeSciChain Test Backend Server started');
+  console.log('🚀 DeSciFi Test Backend Server started');
   console.log(`📊 Server running on: http://localhost:${PORT}`);
   console.log(`💊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);

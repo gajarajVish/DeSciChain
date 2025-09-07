@@ -1,5 +1,5 @@
 /**
- * Enhanced Blockchain Service for DeSciChain
+ * Enhanced Blockchain Service for DeSciFi
  * Real wallet connectivity with Exodus, Pera, and other Algorand wallets
  */
 
@@ -297,7 +297,7 @@ class BlockchainService {
                         <button class="wallet-modal-close" onclick="this.closest('.wallet-modal-overlay').remove(); return false;">&times;</button>
                     </div>
                     <div class="wallet-modal-content">
-                        <p>Choose a wallet to connect to DeSciChain:</p>
+                        <p>Choose a wallet to connect to DeSciFi:</p>
                         <div class="wallet-options">
                             ${this.availableWallets.map(wallet => `
                                 <button class="wallet-option" data-wallet="${wallet.id}">

@@ -1,7 +1,7 @@
 {
-  "name": "desci-chain-backend",
+  "name": "descifi-backend",
   "version": "1.0.0",
-  "description": "Backend API for DeSciChain ML Marketplace",
+  "description": "Backend API for DeSciFi ML Marketplace",
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
@@ -27,7 +27,7 @@
     "marketplace",
     "decentralized"
   ],
-  "author": "DeSciChain Team",
+  "author": "DeSciFi Team",
   "license": "MIT",
   "dependencies": {
     "@algorandfoundation/algokit-utils": "^1.0.0",

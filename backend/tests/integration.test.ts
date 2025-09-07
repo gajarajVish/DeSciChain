@@ -1,5 +1,5 @@
 /**
- * Integration Tests for DeSciChain
+ * Integration Tests for DeSciFi
  * Tests the complete publish -> purchase -> download flow
  */
 
@@ -11,7 +11,7 @@ import { EncryptionService } from '../services/encryption.service';
 import { WatermarkService } from '../services/watermark.service';
 import { EscrowService } from '../services/escrow.service';
 
-describe('DeSciChain Integration Tests', () => {
+describe('DeSciFi Integration Tests', () => {
   let blockchainService: BlockchainService;
   let ipfsService: IPFSService;
   let encryptionService: EncryptionService;

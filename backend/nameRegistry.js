@@ -1,5 +1,5 @@
 /**
- * Name Registry API for DeSciChain
+ * Name Registry API for DeSciFi
  * Provides REST endpoints for interacting with the Name Registry contract
  */
 

@@ -1,5 +1,5 @@
 /**
- * DeSciChain Backend Server
+ * DeSciFi Backend Server
  * Main entry point for the API server
  */
 
@@ -164,7 +164,7 @@ app.use('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 DeSciChain Backend Server running on port ${PORT}`);
+  console.log(`🚀 DeSciFi Backend Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);

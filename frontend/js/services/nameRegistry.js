@@ -1,5 +1,5 @@
 /**
- * Name Registry Service for DeSciChain
+ * Name Registry Service for DeSciFi
  * Handles interaction with the Name Registry API and smart contract
  */
 

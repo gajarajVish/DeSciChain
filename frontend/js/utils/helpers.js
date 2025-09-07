@@ -1,5 +1,5 @@
 /**
- * Utility helper functions for DeSciChain
+ * Utility helper functions for DeSciFi
  */
 
 class HelperUtils {

@@ -1,7 +1,7 @@
 {
-  "name": "desci-chain-frontend",
+  "name": "descifi-frontend",
   "version": "1.0.0",
-  "description": "Frontend for DeSciChain ML Marketplace",
+  "description": "Frontend for DeSciFi ML Marketplace",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -29,6 +29,6 @@
     "marketplace",
     "frontend"
   ],
-  "author": "DeSciChain Team",
+  "author": "DeSciFi Team",
   "license": "MIT"
 }

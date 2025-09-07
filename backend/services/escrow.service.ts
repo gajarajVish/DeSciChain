@@ -1,5 +1,5 @@
 /**
- * Escrow Service for DeSciChain
+ * Escrow Service for DeSciFi
  * Manages escrow state and payment processing
  */
 

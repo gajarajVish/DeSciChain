@@ -1,5 +1,5 @@
 /**
- * Secure Blockchain Service for DeSciChain
+ * Secure Blockchain Service for DeSciFi
  * Builds unsigned transactions for wallet signing - NO private keys handled server-side
  */
 

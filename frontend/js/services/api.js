@@ -1,5 +1,5 @@
 /**
- * Simple API Service for DeSciChain
+ * Simple API Service for DeSciFi
  * Works with the test backend endpoints
  */
 

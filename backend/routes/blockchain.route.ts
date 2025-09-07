@@ -1,5 +1,5 @@
 /**
- * Blockchain Routes for DeSciChain
+ * Blockchain Routes for DeSciFi
  * Handles blockchain status and transaction monitoring
  */
 

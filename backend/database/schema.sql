@@ -1,4 +1,4 @@
--- DeSciChain Database Schema
+-- DeSciFi Database Schema
 -- Extends existing Stelace database with ML marketplace tables
 
 -- Published Models Table
