@@ -1,281 +1,353 @@
 # DeSciChain - Decentralized ML Models Marketplace
 
-A blockchain-based marketplace for machine learning models, built on Algorand and IPFS, enabling researchers to monetize their ML models while ensuring intellectual property protection through watermarking and encryption.
+A production-ready, blockchain-based marketplace for machine learning models built on Algorand with IPFS storage, featuring advanced cryptography, multi-wallet support, and comprehensive model protection through watermarking and encryption.
 
-## 🚀 Features
+## 🚀 Overview
 
-### Core Functionality
-- **Model Publishing**: Upload, encrypt, and watermark ML models
-- **Secure Transactions**: Algorand blockchain-based payments
-- **IPFS Storage**: Decentralized file storage
-- **Watermarking**: Ownership verification and protection
-- **Escrow System**: Secure payment processing
-- **Wallet Integration**: Pera Wallet support
+DeSciChain enables researchers and data scientists to securely monetize their ML models while ensuring intellectual property protection. Built with modern web technologies and leveraging Algorand's blockchain infrastructure for transparent, secure transactions.
 
-### Technical Features
-- **Smart Contracts**: PyTeal-based Algorand contracts
-- **Encryption**: AES-256-GCM model protection
-- **Watermarking**: Multiple watermarking strategies
-- **API**: RESTful backend with TypeScript
-- **Frontend**: React with TypeScript
-- **Database**: PostgreSQL with comprehensive schema
+### **Key Features**
+
+- **🔗 Multi-Wallet Support**: Pera, Defly, Exodus, and AlgoSigner integration
+- **🔐 Advanced Security**: Multi-layer encryption (AES-256-GCM + RSA hybrid)
+- **💧 Watermarking**: Ownership verification and IP protection
+- **📦 IPFS Storage**: Decentralized file storage for model assets
+- **💰 Escrow System**: Smart contract-based secure payments
+- **🎨 Modern UI**: Responsive design with dark/light themes
+- **⚡ Real-time Updates**: Live blockchain transaction monitoring
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Backend       │    │   Blockchain    │
-│   (React)       │◄──►│   (Node.js)     │◄──►│   (Algorand)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │   IPFS Storage  │
-                       │   (Decentralized)│
-                       └─────────────────┘
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│   Frontend          │    │   Backend           │    │   Blockchain        │
+│   (Vanilla JS)      │◄──►│   (Node.js/TS)     │◄──►│   (Algorand)        │
+│   - Multi-wallet    │    │   - API Routes      │    │   - Smart Contracts │
+│   - Model UI        │    │   - Encryption      │    │   - Escrow System   │
+│   - Theme System    │    │   - IPFS Client     │    │   - Model Registry  │
+└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+                                      │                           │
+                                      ▼                           ▼
+                             ┌─────────────────────┐    ┌─────────────────────┐
+                             │   PostgreSQL        │    │   IPFS Network      │
+                             │   - Model Metadata  │    │   - Model Files     │
+                             │   - Purchase History│    │   - Encrypted Data  │
+                             │   - User Analytics  │    │   - Decentralized   │
+                             └─────────────────────┘    └─────────────────────┘
 ```
 
 ## 📁 Project Structure
 
 ```
 DeSciChain/
-├── contracts/                 # Smart Contracts (PyTeal)
-│   ├── ModelRegistry.py      # Model registration contract
-│   ├── Escrow.py             # Payment escrow contract
-│   ├── deployContracts.py    # Deployment script
-│   └── test_contracts.py     # Contract tests
-├── backend/                   # Backend API (Node.js/TypeScript)
-│   ├── services/             # Business logic services
-│   │   ├── blockchain.service.ts
-│   │   ├── ipfs.service.ts
-│   │   ├── encryption.service.ts
-│   │   ├── watermark.service.ts
-│   │   └── escrow.service.ts
-│   ├── routes/               # API routes
-│   │   ├── models.route.ts
-│   │   └── blockchain.route.ts
-│   ├── database/             # Database schema
-│   │   └── schema.sql
-│   └── package.json
-├── frontend/                  # Frontend (React/TypeScript)
-│   ├── components/           # React components
-│   │   ├── WalletConnect.tsx
-│   │   ├── ModelMarketplace.tsx
-│   │   ├── ModelPublisher.tsx
-│   │   ├── PurchaseFlow.tsx
-│   │   └── ModelDownloader.tsx
-│   ├── App.tsx              # Main app component
-│   ├── App.css              # Styles
-│   └── package.json
-└── README.md
+├── contracts/                      # Smart Contracts (PyTeal)
+│   ├── ModelRegistry.py           # Model registration contract
+│   ├── Escrow.py                  # Payment escrow contract
+│   ├── NameRegistry.py            # Name resolution contract
+│   ├── deployContracts.py         # Deployment automation
+│   ├── test_contracts.py          # Contract unit tests
+│   └── requirements.txt           # Python dependencies
+├── backend/                        # Backend API (Node.js/TypeScript)
+│   ├── services/                  # Business logic services
+│   │   ├── blockchain.service.ts  # Algorand integration
+│   │   ├── ipfs.service.ts        # IPFS file operations
+│   │   ├── encryption.service.ts  # Multi-layer cryptography
+│   │   ├── watermark.service.ts   # Model watermarking
+│   │   ├── database.service.ts    # PostgreSQL operations
+│   │   └── escrow.service.ts      # Escrow monitoring
+│   ├── routes/                    # API endpoints
+│   │   ├── models.route.ts        # Model CRUD operations
+│   │   ├── blockchain.route.ts    # Blockchain status
+│   │   └── nameRegistry.route.ts  # Name resolution
+│   ├── database/                  # Database management
+│   │   ├── schema.sql            # Complete database schema
+│   │   └── migrate.js            # Migration script
+│   ├── tests/                     # Test suites
+│   │   └── integration.test.ts   # End-to-end tests
+│   ├── index.ts                   # Main server entry
+│   └── package.json              # Dependencies & scripts
+├── frontend/                       # Frontend (Vanilla JavaScript)
+│   ├── js/                        # Application logic
+│   │   ├── app.js                # Main application class
+│   │   ├── services/             # Frontend services
+│   │   │   ├── api.js           # Backend API client
+│   │   │   ├── blockchain.js    # Multi-wallet integration
+│   │   │   └── nameRegistry.js  # Name resolution
+│   │   ├── components/           # UI components
+│   │   │   └── NameRegistry.js  # Name registry UI
+│   │   └── utils/               # Utility functions
+│   │       └── helpers.js       # Common helpers
+│   ├── styles/                   # Stylesheets
+│   │   ├── app.css              # Main application styles
+│   │   ├── lightMode.css        # Light theme
+│   │   └── darkMode.css         # Dark theme
+│   ├── img/                      # Static assets
+│   ├── index.html               # Main HTML file
+│   ├── server.js                # Static file server
+│   └── package.json             # Frontend dependencies
+├── deploy-contracts.sh            # Contract deployment script
+├── setup.sh                      # Initial project setup
+├── INTEGRATION_README.md          # Detailed integration guide
+└── README.md                     # This file
 ```
 
-## 🛠️ Installation & Setup
+## 🛠️ Technology Stack
 
-### Prerequisites
+### **Blockchain & Crypto**
+- **Algorand**: Layer-1 blockchain for fast, secure transactions
+- **PyTeal**: Smart contract development framework
+- **Multi-Wallet**: Pera, Defly, Exodus, AlgoSigner support
+- **AES-256-GCM**: Symmetric encryption for model files
+- **RSA Hybrid**: Public key encryption for key exchange
+- **PBKDF2/scrypt/argon2**: Key derivation functions
 
-- Node.js 18+
-- Python 3.8+
+### **Backend**
+- **Node.js + TypeScript**: Server runtime and language
+- **Express.js**: Web application framework
+- **PostgreSQL**: Primary database with comprehensive schema
+- **IPFS**: Decentralized file storage
+- **Multer**: File upload handling
+- **Helmet + CORS**: Security middleware
+
+### **Frontend**
+- **Vanilla JavaScript**: Modern ES6+ without framework dependencies
+- **AlgoSDK**: Algorand JavaScript SDK
+- **Font Awesome**: Icon library
+- **Responsive CSS**: Mobile-first design
+- **Theme System**: Dark/light mode support
+
+### **Development & Deployment**
+- **Jest**: Testing framework
+- **ESLint + Prettier**: Code quality tools
+- **Docker**: Containerization support
+- **GitHub Actions**: CI/CD pipeline ready
+
+## 🚀 Quick Start
+
+### **Prerequisites**
+- Node.js 18+ and npm
+- Python 3.8+ with pip
 - PostgreSQL 13+
-- IPFS node
-- Algorand TestNet account
+- IPFS node (optional, uses public gateway by default)
+- Algorand TestNet account with ALGO
 
-### 1. Clone Repository
-
+### **1. Initial Setup**
 ```bash
-git clone https://github.com/your-org/DeSciChain.git
+# Clone and setup
+git clone <your-repo-url>
 cd DeSciChain
+
+# Run automated setup
+chmod +x setup.sh
+./setup.sh
 ```
 
-### 2. Backend Setup
+### **2. Environment Configuration**
 
-```bash
-cd backend
-npm install
-
-# Install Python dependencies for contracts
-cd ../contracts
-pip install -r requirements.txt
-
-# Deploy smart contracts
-python deployContracts.py
-
-# Set environment variables
-cp .env.example .env
-# Edit .env with your configuration
-
-# Run database migrations
-npm run migrate
-
-# Start development server
-npm run dev
-```
-
-### 3. Frontend Setup
-
-```bash
-cd frontend
-npm install
-
-# Start development server
-npm start
-```
-
-### 4. IPFS Setup
-
-```bash
-# Install IPFS
-npm install -g ipfs
-
-# Initialize IPFS node
-ipfs init
-
-# Start IPFS daemon
-ipfs daemon
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create `.env` file in the backend directory:
-
+**Backend Environment (`backend/.env`):**
 ```env
 # Algorand Configuration
 ALGOD_TOKEN=your-algod-token
 ALGOD_SERVER=https://testnet-api.algonode.cloud
-MODEL_REGISTRY_APP_ID=your-app-id
-ESCROW_APP_ID=your-app-id
+ALGOD_PORT=443
+MODEL_REGISTRY_APP_ID=your-deployed-app-id
+ESCROW_APP_ID=your-deployed-escrow-id
 
-# IPFS Configuration
+# Database
+DATABASE_URL=postgresql://username:password@localhost:5432/descichain
+
+# Security
+JWT_SECRET=your-jwt-secret-key
+ENCRYPTION_KEY=your-32-character-encryption-key
+
+# IPFS (optional)
 IPFS_HOST=localhost
 IPFS_PORT=5001
-
-# Database Configuration
-DATABASE_URL=postgresql://user:pass@localhost:5432/desci_chain
-
-# JWT Secret
-JWT_SECRET=your-jwt-secret
 ```
 
-## 🚀 Usage
+**Contracts Environment (`contracts/.env`):**
+```env
+# Deployment Account
+CREATOR_MNEMONIC="your 25-word mnemonic phrase here"
+ALGOD_TOKEN=your-algod-token
+ALGOD_SERVER=https://testnet-api.algonode.cloud
+NETWORK=testnet
+```
 
-### 1. Connect Wallet
+### **3. Database Setup**
+```bash
+# Create database
+createdb descichain
 
-1. Install Pera Wallet browser extension
-2. Create or import an Algorand wallet
-3. Connect to TestNet
-4. Click "Connect Wallet" in the app
+# Run migrations
+cd backend
+npm run migrate
+```
 
-### 2. Publish Model
+### **4. Smart Contract Deployment**
+```bash
+# Deploy contracts to TestNet
+cd contracts
+python deployContracts.py
 
-1. Navigate to "Publish" page
-2. Upload your ML model file
-3. Fill in model metadata
-4. Set license terms
-5. Click "Publish Model"
+# Update backend .env with deployed app IDs
+```
 
-### 3. Purchase Model
+### **5. Start Services**
+```bash
+# Terminal 1: Backend
+cd backend
+npm run dev
 
-1. Browse models in "Marketplace"
+# Terminal 2: Frontend
+cd frontend
+npm start
+
+# Terminal 3: IPFS (optional)
+ipfs daemon
+```
+
+### **6. Access Application**
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:3001
+- **API Health**: http://localhost:3001/health
+
+## 💡 Usage
+
+### **Connect Wallet**
+1. Click "Connect Wallet" in the header
+2. Choose from Pera, Defly, Exodus, or AlgoSigner
+3. Approve connection in your wallet
+
+### **Publish Model**
+1. Navigate to "Publish" tab
+2. Upload your ML model file (.pkl, .pth, .h5, etc.)
+3. Fill in model metadata (name, description, framework)
+4. Set license terms and price
+5. Sign the transaction to publish
+
+### **Purchase Model**
+1. Browse models in "Marketplace" tab
 2. Click "Purchase" on desired model
-3. Confirm transaction in wallet
-4. Wait for payment confirmation
-5. Download model with decryption key
+3. Review model details and price
+4. Sign payment transaction
+5. Wait for escrow confirmation
 
-### 4. Download Model
-
-1. Go to "My Purchases"
-2. Enter decryption key
-3. Click "Download Model"
-4. Decrypt model file
+### **Download Model**
+1. Go to "My Models" tab to see purchases
+2. Click "Download" on purchased model
+3. Model is automatically decrypted
+4. Save to your local machine
 
 ## 🔒 Security Features
 
-### Encryption
-- AES-256-GCM encryption for model files
-- PBKDF2 key derivation
-- Secure key generation and storage
+### **Multi-Layer Encryption**
+- **Watermarking**: Invisible ownership markers embedded in models
+- **AES-256-GCM**: Industry-standard symmetric encryption
+- **RSA Hybrid**: Secure key exchange using public-key cryptography
+- **HMAC**: Data integrity verification
+- **Secure Key Derivation**: PBKDF2, scrypt, and argon2 support
 
-### Watermarking
-- Multiple watermarking strategies
-- Steganographic embedding
-- Ownership verification
+### **Blockchain Security**
+- **Smart Contracts**: Immutable business logic on Algorand
+- **Escrow System**: Funds locked until model delivery
+- **Transaction Verification**: Cryptographic proof of payments
+- **No Private Keys**: Client-side signing only
 
-### Blockchain Security
-- Algorand Pure Proof of Stake
-- Smart contract-based escrow
-- Immutable transaction records
+### **API Security**
+- **Rate Limiting**: DDoS protection
+- **CORS**: Cross-origin request security
+- **Helmet**: Security headers
+- **Input Validation**: Comprehensive request validation
+
+## 📊 Database Schema
+
+The application uses a comprehensive PostgreSQL schema with 8 main tables:
+
+- **`published_models`**: Model registry with metadata and encryption info
+- **`model_purchases`**: Purchase history and status tracking
+- **`model_metadata`**: Extended model information and performance metrics
+- **`escrow_states`**: Blockchain escrow state persistence
+- **`model_access_keys`**: Encrypted key storage for purchased models
+- **`labs`**: Research lab profiles and verification
+- **`model_reviews`**: User ratings and feedback
+- **`model_downloads`**: Analytics and usage tracking
 
 ## 🧪 Testing
 
-### Backend Tests
-
+### **Backend Tests**
 ```bash
 cd backend
-npm test
+npm test                    # Run all tests
+npm run test:watch         # Watch mode
+npm run test:coverage      # Coverage report
 ```
 
-### Contract Tests
-
+### **Smart Contract Tests**
 ```bash
 cd contracts
-python test_contracts.py
+python test_contracts.py   # PyTeal contract tests
 ```
 
-### Frontend Tests
-
+### **Integration Tests**
 ```bash
-cd frontend
-npm test
+cd backend
+npm run test:integration   # End-to-end workflow tests
 ```
 
-## 📊 API Documentation
+## 📚 API Documentation
 
-### Models API
-
-- `POST /api/models/publish` - Publish new model
-- `GET /api/models` - List all models
+### **Models API**
+- `POST /api/models/prepare-publish` - Prepare model publishing transaction
+- `POST /api/models/confirm-publish` - Confirm published model
+- `GET /api/models` - List all published models
 - `GET /api/models/:id` - Get model details
-- `POST /api/models/purchase` - Purchase model
-- `GET /api/models/download` - Download model
+- `POST /api/models/prepare-purchase` - Prepare purchase transaction
+- `POST /api/models/confirm-purchase` - Confirm model purchase
+- `GET /api/models/download` - Download purchased model
 
-### Blockchain API
+### **Blockchain API**
+- `GET /api/blockchain/status` - Network status
+- `GET /api/blockchain/transaction/:id` - Transaction details
+- `GET /api/blockchain/account/:address` - Account information
 
-- `GET /api/blockchain/status` - Blockchain status
-- `GET /api/blockchain/transaction/:id` - Transaction status
-- `GET /api/blockchain/account/:address` - Account info
+### **Name Registry API**
+- `POST /api/name-registry/register` - Register name
+- `GET /api/name-registry/resolve/:name` - Resolve name to address
+- `GET /api/name-registry/reverse/:address` - Reverse lookup
 
-## 🚀 Deployment
+## 🚀 Production Deployment
 
-### Production Deployment
-
-1. **Deploy Smart Contracts**
-   ```bash
-   cd contracts
-   python deployContracts.py
-   ```
-
-2. **Deploy Backend**
-   ```bash
-   cd backend
-   npm run build
-   npm start
-   ```
-
-3. **Deploy Frontend**
-   ```bash
-   cd frontend
-   npm run build
-   # Deploy dist/ folder to your hosting service
-   ```
-
-### Docker Deployment
-
+### **Docker Deployment**
 ```bash
 # Build and run with Docker Compose
 docker-compose up -d
 ```
+
+### **Manual Deployment**
+1. **Deploy Smart Contracts to MainNet**
+2. **Configure Production Environment**
+3. **Setup PostgreSQL Database**
+4. **Deploy Backend to Cloud Service**
+5. **Build and Deploy Frontend**
+6. **Configure HTTPS and Domain**
+
+## 🔧 Configuration Options
+
+### **Encryption Settings**
+- Key derivation algorithms (PBKDF2, scrypt, argon2)
+- Encryption modes (AES-256-GCM, ChaCha20-Poly1305)
+- Watermark strategies (steganographic, metadata-based)
+
+### **Blockchain Settings**
+- Network selection (TestNet, MainNet)
+- Transaction fees and timeouts
+- Smart contract parameters
+
+### **Storage Options**
+- IPFS node configuration
+- Local storage fallbacks
+- CDN integration for assets
 
 ## 🤝 Contributing
 
@@ -285,34 +357,51 @@ docker-compose up -d
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open Pull Request
 
+### **Development Guidelines**
+- Follow TypeScript/JavaScript best practices
+- Write comprehensive tests
+- Update documentation
+- Ensure security best practices
+
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Algorand Foundation for blockchain infrastructure
-- IPFS for decentralized storage
-- Pera Wallet for wallet integration
-- React and TypeScript communities
+- **Algorand Foundation** for blockchain infrastructure
+- **IPFS** for decentralized storage
+- **ENS Domains** naming inspiration
+- **Pera Wallet** and other wallet providers
+- **Open source community** for tools and libraries
 
-## 📞 Support
 
-- Documentation: [docs.desci-chain.com](https://docs.desci-chain.com)
-- Issues: [GitHub Issues](https://github.com/your-org/DeSciChain/issues)
-- Discord: [DeSciChain Community](https://discord.gg/desci-chain)
+## 🗺️ Roadmap
 
-## 🔮 Roadmap
+### **Phase 1: Core Platform** ✅
+- [x] Smart contract development
+- [x] Multi-wallet integration
+- [x] Basic marketplace functionality
+- [x] Encryption and watermarking
 
-- [ ] MainNet deployment
-- [ ] Advanced watermarking techniques
+### **Phase 2: Enhanced Features** 🚧
+- [ ] Advanced analytics dashboard
 - [ ] Model versioning system
-- [ ] Reputation system
-- [ ] Mobile app
-- [ ] API rate limiting
-- [ ] Advanced analytics
+- [ ] Reputation and rating system
+- [ ] Mobile application
+
+### **Phase 3: Ecosystem Growth** 📋
+- [ ] MainNet deployment
 - [ ] Multi-chain support
+- [ ] API marketplace
+- [ ] Enterprise features
+
+### **Phase 4: Advanced Capabilities** 🔮
+- [ ] AI-powered model recommendations
+- [ ] Automated testing frameworks
+- [ ] Federated learning support
+- [ ] Research collaboration tools
 
 ---
 
-**Built with ❤️ by the DeSciChain Team**
+*Empowering researchers to monetize their AI innovations through blockchain technology*
