@@ -11,9 +11,6 @@ A production-ready, blockchain-based marketplace for machine learning models bui
 
 <img width="933" height="983" alt="image" src="https://github.com/user-attachments/assets/93622990-0935-4b09-a842-6c73f865b297" />
 
-Link to Video Demo:
-
-https://www.loom.com/share/491d481ecff342e8b1806d478e45651d?sid=104974f8-3217-40c3-a865-0e57b3505ae4
 
 ## 🚀 Overview
 
