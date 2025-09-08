@@ -1,5 +1,4 @@
 # DeSciFi - Decentralized ML Models Marketplace
-https://www.canva.com/design/DAGyRO3y_Js/SOR9WB3LRumuls-AN3XCEA/edit?utm_content=DAGyRO3y_Js&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton 
 
 
 
@@ -11,6 +10,7 @@ A production-ready, blockchain-based marketplace for machine learning models bui
 
 <img width="933" height="983" alt="image" src="https://github.com/user-attachments/assets/93622990-0935-4b09-a842-6c73f865b297" />
 
+Link to presentation: https://www.canva.com/design/DAGyRO3y_Js/SOR9WB3LRumuls-AN3XCEA/edit?utm_content=DAGyRO3y_Js&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton 
 
 ## 🚀 Overview
 
